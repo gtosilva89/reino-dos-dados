@@ -1,0 +1,938 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reino dos Dados</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: HUD de RPG no topo, mapa em pixel art à esquerda, diário de viagem à direita; cenas em janela de diálogo estilo console 16-bit */
+:root{
+  --noite:#14112a; --painel:#221c40; --borda:#f2e9d8; --texto:#f2e9d8; --suave:#b8b0d6;
+  --ouro:#ffcf4a; --vida:#ff5d73; --ok:#7ae582; --mana:#5ec8ff; --sombra:#0a0818;
+  --f-tit:'Press Start 2P', ui-monospace, 'Courier New', monospace;
+  --f-txt:'VT323', ui-monospace, 'Courier New', monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+button.som[aria-pressed="false"]{opacity:.6;text-decoration:line-through}
+html,body{height:100%}
+body{background:var(--noite);color:var(--texto);font-family:var(--f-txt);font-size:22px;line-height:1.15;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;}
+*{box-sizing:border-box}
+button{font-family:var(--f-txt);font-size:22px;color:var(--noite);background:var(--ouro);border:0;padding:8px 14px;cursor:pointer;
+  box-shadow:0 4px 0 #b8860b, 0 0 0 3px var(--sombra);}
+button:hover{filter:brightness(1.08)} button:active{transform:translateY(3px);box-shadow:0 1px 0 #b8860b,0 0 0 3px var(--sombra)}
+button:focus-visible,input:focus-visible{outline:3px dashed var(--mana);outline-offset:3px}
+button.sec{background:var(--suave);box-shadow:0 4px 0 #6f6894,0 0 0 3px var(--sombra)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.px{border:3px solid var(--borda);box-shadow:0 0 0 3px var(--sombra),6px 6px 0 3px var(--sombra);background:var(--painel)}
+h1,h2,h3{font-family:var(--f-tit);font-weight:400;text-wrap:balance;margin:0}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+/* HUD */
+.hud{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;padding:10px 14px}
+.hud h1{font-size:14px;color:var(--ouro);letter-spacing:1px}
+.stat{display:flex;gap:8px;align-items:center;min-width:0}
+.stat b{font-family:var(--f-tit);font-size:10px;color:var(--suave);font-weight:400}
+.hearts{letter-spacing:2px;color:var(--vida);font-size:26px}
+.xpbar{width:150px;height:14px;background:var(--sombra);border:2px solid var(--borda);position:relative}
+.xpbar i{position:absolute;inset:0 auto 0 0;background:var(--mana);width:0}
+.selos{display:flex;gap:6px;flex-wrap:wrap}
+.selo{font-family:var(--f-tit);font-size:9px;background:var(--ouro);color:var(--noite);padding:4px 6px}
+.hud .spacer{flex:1}
+/* área principal */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.mapa{position:relative;aspect-ratio:320/184;max-width:100%;padding:0}
+.mapa canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+.lbl{position:absolute;transform:translate(-50%,0);font-size:17px;padding:1px 6px;background:rgba(10,8,24,.82);color:var(--texto);
+  white-space:nowrap;pointer-events:none;border:2px solid transparent}
+.lbl.disp{border-color:var(--ouro);color:var(--ouro)} .lbl.feito{color:var(--ok)} .lbl.trava{color:#8a84a8}
+@media (max-width:620px){.lbl{font-size:13px;padding:0 3px}}
+.diario{padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.diario h2{font-size:11px;color:var(--ouro);margin-bottom:4px}
+.lugar{display:flex;justify-content:space-between;gap:8px;align-items:center;background:transparent;color:var(--texto);box-shadow:none;padding:4px 6px;text-align:left;border:2px solid #3b3366;font-size:20px}
+.lugar:hover{border-color:var(--ouro)} .lugar small{font-size:16px;color:var(--suave)}
+.lugar.feito small{color:var(--ok)} .lugar.disp small{color:var(--ouro)}
+.lugar:disabled{opacity:.5}
+.dica{font-size:18px;color:var(--suave)}
+/* cena */
+.veu{position:fixed;inset:0;background:rgba(10,8,24,.78);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.cena{width:min(820px,100%);max-height:100%;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.cena h2{font-size:14px;color:var(--ouro);line-height:1.5}
+.npc{display:flex;gap:14px;align-items:flex-start}
+.npc canvas{width:96px;height:96px;image-rendering:pixelated;flex:none;border:3px solid var(--borda);background:#2d2655}
+.fala{font-size:24px;min-width:0}
+.fala .quem{font-family:var(--f-tit);font-size:10px;color:var(--mana);display:block;margin-bottom:6px}
+.acoes{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.perg{border:3px dashed #e8d9a8;background:#f6ecd0;color:#3a2a14;padding:14px 16px;font-size:22px;line-height:1.2}
+.perg h3{font-size:12px;color:#7a3d14;margin-bottom:10px;line-height:1.6}
+.perg p{margin:0 0 8px} .perg .ex{background:#ead9a8;padding:8px;border-left:6px solid #b5442e}
+.arena{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.arena{grid-template-columns:minmax(0,1fr)}}
+.arena canvas{width:120px;height:120px;image-rendering:pixelated;justify-self:center}
+.hpb{height:14px;background:var(--sombra);border:2px solid var(--borda);position:relative;margin-top:6px}
+.hpb i{position:absolute;inset:0 auto 0 0;background:var(--vida);transition:width .3s}
+.ops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.ops{grid-template-columns:minmax(0,1fr)}}
+.ops button{background:var(--painel);color:var(--texto);box-shadow:0 0 0 3px var(--borda);text-align:left;font-size:21px;padding:10px 12px}
+.ops button:hover{background:#2f2758}
+.ops button.certo{background:#1f5f3a;box-shadow:0 0 0 3px var(--ok)} .ops button.errado{background:#6b1f2c;box-shadow:0 0 0 3px var(--vida)}
+.fb{font-size:21px;padding:8px 10px;border-left:6px solid var(--mana);background:#1a1533}
+.fb.ok{border-color:var(--ok)} .fb.no{border-color:var(--vida)}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{background:var(--painel);color:var(--texto);box-shadow:0 0 0 3px #6f6894;font-size:21px}
+.chip[aria-pressed="true"]{background:var(--mana);color:var(--noite);box-shadow:0 0 0 3px var(--borda)}
+.regras{display:grid;gap:4px;font-size:20px}
+.regras div{display:grid;grid-template-columns:58px minmax(0,1fr);gap:6px;background:#1a1533;padding:4px 8px}
+.regras b{color:var(--ouro);font-family:var(--f-tit);font-size:9px;padding-top:5px}
+.linha{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center}
+@media (max-width:560px){.linha{grid-template-columns:minmax(0,1fr)}}
+select,input{font-family:var(--f-txt);font-size:22px;background:var(--sombra);color:var(--texto);border:3px solid var(--borda);padding:6px 8px;max-width:100%}
+.tit-inicio{font-size:clamp(18px,4vw,34px);color:var(--ouro);line-height:1.4;text-shadow:4px 4px 0 var(--sombra)}
+.avs{display:flex;gap:12px;flex-wrap:wrap}
+.avs button{background:#2d2655;box-shadow:0 0 0 3px #6f6894;padding:6px}
+.avs button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ouro);background:#3b3366}
+.avs canvas{width:64px;height:80px;image-rendering:pixelated;display:block}
+.ficha table{width:100%;border-collapse:collapse;font-size:20px}
+.ficha td,.ficha th{border-bottom:2px solid #3b3366;padding:4px 6px;text-align:left}
+.ficha th{font-family:var(--f-tit);font-size:9px;color:var(--suave);font-weight:400}
+.num{font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;font-family:var(--f-tit);font-size:11px;background:var(--ouro);color:var(--noite);padding:10px 14px;box-shadow:0 0 0 3px var(--sombra)}
+.tremer{animation:tre .35s}
+@keyframes tre{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+@media (prefers-reduced-motion:reduce){.tremer{animation:none}.hpb i{transition:none}}
+.hud .dif{font-family:var(--f-tit);font-size:10px;background:var(--mana);color:var(--noite);padding:4px 6px}
+.lbl.regiao{font-family:var(--f-tit);font-size:10px;padding:4px 6px;border-color:var(--borda)}
+.lbl.regiao.trava{color:#8a84a8;border-color:#3b3366}
+.reg{font-family:var(--f-tit);font-size:9px;color:var(--mana);margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px;line-height:1.5}
+.reg.trava{color:#8a84a8}
+.mini{font-size:16px;padding:2px 8px;box-shadow:0 2px 0 #b8860b,0 0 0 2px var(--sombra)}
+.arte{width:100%;max-width:480px;aspect-ratio:96/54;image-rendering:pixelated;align-self:center;border:3px solid var(--borda)}
+.tbw{overflow-x:auto;max-width:100%}
+.tb{border-collapse:collapse;font-size:20px;min-width:100%}
+.tb th,.tb td{border:2px solid #3b3366;padding:3px 8px;text-align:left;white-space:nowrap}
+.tb th{background:#004f8b;color:#fff;font-weight:400}
+.cod{background:#0a0818;color:#80ed99;border:2px solid #3b3366;padding:10px 12px;margin:0;font-family:ui-monospace,'Courier New',monospace;font-size:15px;line-height:1.35;overflow-x:auto;white-space:pre}
+.nvs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.nvs{grid-template-columns:minmax(0,1fr)}}
+.nv{border:3px solid var(--borda);padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:#1a1533;min-width:0}
+.nv.facil{border-color:var(--ok)} .nv.medio{border-color:var(--ouro)} .nv.dificil{border-color:var(--mana)} .nv.expert{border-color:#c77dff}
+.nv.trava{opacity:.8;border-style:dashed}
+.nvtop{display:flex;justify-content:space-between;gap:8px}
+.nvn{font-family:var(--f-tit);font-size:12px;color:var(--ouro)}
+.nvt{font-size:24px}
+.fh{font-size:10px;color:var(--mana);margin:8px 0 4px;line-height:1.5}
+summary{cursor:pointer;color:var(--suave)}
+</style>
+</head><body>
+<div class="wrap">
+  <header class="hud px" aria-label="Status do aventureiro">
+    <h1>REINO DOS DADOS</h1>
+    <span class="dif" id="hDif">—</span>
+    <div class="stat"><b>HERÓI</b><span id="hNome">—</span></div>
+    <div class="stat"><b>VIDA</b><span class="hearts" id="hVida" aria-live="polite"></span></div>
+    <div class="stat"><b>NÍVEL</b><span id="hNivel">—</span></div>
+    <div class="stat"><b>XP</b><div class="xpbar" aria-hidden="true"><i id="hXpBar"></i></div><span class="num" id="hXp">0</span></div>
+    <div class="selos" id="hSelos"></div>
+    <div class="spacer"></div>
+    <button class="sec" id="btnVisao" type="button" aria-pressed="false">Mapa completo</button>
+    <button class="sec" id="btnNiveis" type="button">Níveis</button>
+    <button class="sec" id="btnFicha" type="button">Ficha</button>
+    <button class="sec som" id="btnFx" type="button" aria-pressed="true">Efeitos: sim</button>
+    <button class="sec som" id="btnMus" type="button" aria-pressed="true">Música: sim</button>
+  </header>
+  <div class="main">
+    <div class="mapa px" id="mapa"><canvas id="cv" width="320" height="184" aria-label="Mapa do nível"></canvas></div>
+    <aside class="diario px" aria-label="Diário de viagem">
+      <h2 id="dTit">DIÁRIO DE VIAGEM</h2>
+      <div class="dica">Clique num lugar brilhando no mapa (ou aqui na lista) para viajar.</div>
+      <div id="lista" style="display:flex;flex-direction:column;gap:6px"></div>
+    </aside>
+  </div>
+</div>
+<div class="veu" id="veu" hidden><div class="cena px" id="cena" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const CARDS = [
+ {t:'Por que o programa esquece?', p:[
+  'Na UC1 vocês guardavam os dados em variáveis, vetores e matrizes. Tudo isso mora na memória RAM: é rápida, mas é apagada quando o programa fecha ou o computador desliga.',
+  'Persistência é a capacidade de os dados continuarem existindo depois que o programa termina. Para isso, eles precisam ir para um armazenamento permanente (disco).',
+  'Dado é o registro bruto: "Ana", "45,00", "16/11". Informação é o dado organizado que ajuda a decidir: "Ana gastou R$ 45,00 na barbearia hoje".',
+  'Dá para salvar em arquivo (.txt, .csv), mas com muitos dados, vários usuários ao mesmo tempo e regras a cumprir, o arquivo vira bagunça: duplicados, um salva por cima do outro, ninguém sabe quem mudou o quê.',
+  'Banco de dados é um conjunto organizado de dados relacionados, guardado de forma permanente.'],
+  ex:'O atendente cadastra 30 clientes no programa em Python, a luz acaba... e o cadastro some. Com banco de dados, ao religar, os 30 continuam lá.'},
+ {t:'SGBD: o gerente dos dados', p:[
+  'SGBD = Sistema Gerenciador de Banco de Dados. É o programa que cuida do banco: guarda, busca, altera e protege os dados.',
+  'Ele armazena de forma permanente, responde consultas, controla quem pode ver e mudar cada coisa (usuários e permissões), deixa várias pessoas usarem ao mesmo tempo e faz cópias de segurança (backup).',
+  'Arquitetura cliente-servidor: o seu programa (cliente) pede; o SGBD (servidor) confere as regras e executa; o banco guarda os dados em tabelas.',
+  'Exemplos de SGBD: PostgreSQL, MySQL, SQL Server, Oracle, SQLite.',
+  'A conversa com o SGBD é em SQL. DDL cria a estrutura (ex.: criar tabela). DML mexe nos dados (inserir, alterar, apagar, consultar).'],
+  ex:'O app da barbearia (cliente) pede "agendamentos de hoje". O PostgreSQL (servidor) busca na tabela agendamento e devolve só o que o atendente pode ver.'},
+ {t:'Tabela, registro, campo e tipo', p:[
+  'No banco relacional os dados ficam em tabelas, parecidas com as matrizes da UC1: linhas e colunas.',
+  'Cada tabela guarda um tipo de coisa: cliente, servico, agendamento (substantivo no singular).',
+  'Campo (coluna) é uma característica: nome, telefone, preço. Registro (linha) é um item completo: a cliente Ana, com telefone e nascimento.',
+  'Cada campo tem um tipo: VARCHAR (texto), INTEGER (inteiro), NUMERIC (com casas decimais), DATE (data), TIME (hora), BOOLEAN (verdadeiro/falso).',
+  'Dicionário de dados descreve cada campo: nome, tipo, tamanho, se é obrigatório, se é chave e para que serve. É o manual do banco.'],
+  ex:'Tabela servico: id (INTEGER), nome (VARCHAR 40), preco (NUMERIC 6,2), duracao_min (INTEGER). Registro: 1 | Corte | 35,00 | 30.'},
+ {t:'Chaves: quem é quem', p:[
+  'Chave primária (PK) identifica cada registro de forma única. Não repete e não fica vazia. Normalmente é um código: id.',
+  'Nome não serve como chave: existem duas "Ana Souza". Telefone também muda. Um id nunca repete e nunca muda.',
+  'Chave estrangeira (FK) é um campo que guarda a PK de OUTRA tabela. É assim que as tabelas se ligam.',
+  'A tabela agendamento tem cliente_id, que aponta para o id da tabela cliente. Assim o banco sabe de quem é cada agendamento sem repetir nome e telefone.',
+  'O SGBD protege a ligação: não deixa criar agendamento para cliente que não existe (integridade referencial). UNIQUE impede repetição em outro campo (ex.: telefone).'],
+  ex:'cliente: id=7, nome=Ana.  agendamento: id=120, cliente_id=7, 16/11, 19:00.  O 7 é a FK que leva até a Ana.'},
+ {t:'MER: o desenho antes do banco', p:[
+  'Antes de criar o banco, a gente desenha. Modelagem de dados é planejar o banco a partir das regras de negócio.',
+  'O MER tem três peças. Entidade: algo sobre o qual guardamos dados (Cliente) → vira tabela. Atributo: característica (nome) → vira campo. Relacionamento: como as entidades se ligam (Cliente FAZ Agendamento).',
+  'Cardinalidade: 1:1 (uma pessoa, um CPF), 1:N (um cliente, vários agendamentos), N:N (um aluno em várias turmas e uma turma com vários alunos).',
+  'Dica: substantivos com dados próprios viram entidades; características viram atributos; verbos que ligam duas entidades viram relacionamentos.',
+  'Um N:N não cabe direto em duas tabelas: vira uma terceira tabela no meio (tabela associativa), com as duas FKs.'],
+  ex:'"Um cliente pode marcar vários agendamentos; cada agendamento é de um só cliente."  →  CLIENTE 1 ──── N AGENDAMENTO'},
+ {t:'Da planilha ao banco de dados', p:[
+  'Uma planilha (Excel) já resolve o "esquecer": o arquivo fica salvo no disco. Isso é persistência.',
+  'Mas uma tabela só, com tudo misturado, cria problemas: repetição (a mesma cliente em várias linhas), inconsistência ("Ana Souza" e "ana souza"), vários valores numa célula ("Corte, Barba") e formatos errados (valor escrito como texto).',
+  'Organizando a planilha como um banco: cada ABA vira uma tabela; cada LINHA, um registro; cada COLUNA, um campo. Um ID que nunca repete é a chave primária. Guardar o ID de outra aba é a chave estrangeira, e o PROCV faz o papel do JOIN. A validação de dados faz o papel das restrições.',
+  'Os limites do Excel: ele deixa apagar um cliente que tem agendamentos (#N/D), aceita dois clientes no mesmo horário, não controla várias pessoas editando ao mesmo tempo, não tem usuários e permissões de verdade e fica lento com milhões de linhas.',
+  'Por isso a gente MIGRA: a estrutura pensada na planilha (abas, IDs, tipos) vira o projeto do banco, e o SGBD passa a garantir as regras.'],
+  ex:'A aba Clientes (ID, Nome, Telefone) vira a tabela cliente (id PK, nome, telefone UNIQUE). A aba Agendamentos guarda ID_Cliente: no banco, cliente_id é uma FK.'}
+];
+const Q = {
+ vila:[
+  {q:'Onde ficam as variáveis enquanto o programa está rodando?', o:['Na memória RAM','No disco, para sempre','Dentro do banco de dados','No GitHub'], c:0, e:'Variáveis moram na RAM. Fechou o programa, elas somem.'},
+  {q:'O que é persistência?', o:['Os dados continuarem existindo depois que o programa fecha','Rodar o programa até dar certo','Salvar o código no GitHub','Um tipo de variável do Python'], c:0, e:'Persistir = sobreviver ao fim do programa.'},
+  {q:'Qual destas é uma INFORMAÇÃO, e não só um dado?', o:['"Ana gastou R$ 45,00 hoje na barbearia"','"45,00"','"Ana"','"16/11"'], c:0, e:'Informação é o dado organizado, com sentido para decidir.'},
+  {q:'Três atendentes salvam no mesmo arquivo .txt ao mesmo tempo. Qual o risco?', o:['Um salvar por cima do que o outro salvou','O .txt não aceitar letras','O arquivo só abrir no Windows','Nenhum risco'], c:0, e:'Sem um gerente (SGBD), as gravações se atropelam.'}],
+ planilha:[
+  {q:'O Seu Jair passou a agenda para o Excel. O problema do "esquecer" foi resolvido?', o:['Sim: o arquivo fica salvo no disco (persistência)','Não: o Excel também apaga tudo ao fechar','Só se ele imprimir a planilha','Só se usar fórmulas'], c:0, e:'Planilha salva em disco já é persistência. Os problemas são outros.'},
+  {q:'"Ana Souza" aparece em 3 linhas, sempre com o mesmo telefone. Que problema é esse?', o:['Repetição (redundância)','Persistência','Chave primária','Backup'], c:0, e:'Dado repetido = redundância: se o telefone mudar, é preciso corrigir em várias linhas.'},
+  {q:'A célula "Serviços" tem "Corte, Barba". Por que isso atrapalha?', o:['Dois valores numa célula: não dá para contar quantos cortes foram feitos','Porque a vírgula apaga a célula','Porque o Excel não aceita texto','Não atrapalha em nada'], c:0, e:'Cada célula (campo) deve ter um valor só: dado atômico.'},
+  {q:'Na planilha organizada, cada ABA (Clientes, Barbeiros, Servicos) corresponde no banco a...', o:['Uma tabela','Um registro','Um campo','Um SGBD'], c:0, e:'Aba = tabela; linha = registro; coluna = campo.'},
+  {q:'Em Agendamentos você guarda o ID do cliente e usa PROCV para buscar o nome. No banco, isso é...', o:['Chave estrangeira (FK) + JOIN','Chave primária + backup','DDL + DML','Uma nova planilha'], c:0, e:'O ID de outra tabela é a FK; buscar os dados ligados é o JOIN.'},
+  {q:'Você apagou a Ana da aba Clientes e os agendamentos dela viraram #N/D. O que um banco de dados faria?', o:['Impediria: a FK protege quem tem histórico','Apagaria tudo junto, sem avisar','Mostraria #N/D também','Nada: banco não tem regras'], c:0, e:'Integridade referencial: o SGBD não deixa a FK apontar para o nada.'},
+  {q:'Por que migrar da planilha para um banco de dados?', o:['Regras garantidas, vários usuários ao mesmo tempo, permissões e grande volume','Porque o Excel não salva arquivos','Porque planilha não tem linhas e colunas','Porque banco de dados é mais bonito'], c:0, e:'O Excel organiza; o SGBD garante, protege e aguenta.'}],
+ torre:[
+  {q:'SGBD significa...', o:['Sistema Gerenciador de Banco de Dados','Sistema Geral de Backup de Dados','Software de Gráficos e Bancos Digitais','Servidor Grande de Banco Distribuído'], c:0, e:'É o programa que gerencia o banco.'},
+  {q:'Qual destes NÃO é um SGBD?', o:['VS Code','PostgreSQL','MySQL','SQLite'], c:0, e:'VS Code é editor de código. Os outros três são SGBDs.'},
+  {q:'No sistema da barbearia, quem faz o papel de SERVIDOR?', o:['O SGBD, que recebe os pedidos e cuida do banco','O celular do atendente','O cliente que cortou o cabelo','O teclado do caixa'], c:0, e:'O app é o cliente; o SGBD é o servidor.'},
+  {q:'Comandos que CRIAM a estrutura (tabelas) fazem parte do grupo...', o:['DDL','DML','CSV','HTML'], c:0, e:'DDL = definição de dados (estrutura).'},
+  {q:'Inserir, alterar, apagar e consultar dados são comandos...', o:['DML','DDL','LGPD','RAM'], c:0, e:'DML = manipulação de dados.'}],
+ floresta:[
+  {q:'Na tabela cliente, uma LINHA é...', o:['Um registro','Um campo','Uma tabela','Uma chave estrangeira'], c:0, e:'Linha = registro; coluna = campo.'},
+  {q:'Qual tipo usar para o preço de um serviço (ex.: 35,50)?', o:['NUMERIC(6,2)','VARCHAR(10)','BOOLEAN','DATE'], c:0, e:'NUMERIC guarda números com casas decimais exatas.'},
+  {q:'Qual tipo usar para a data do agendamento?', o:['DATE','INTEGER','BOOLEAN','TIME'], c:0, e:'DATE para data; TIME para a hora.'},
+  {q:'Para que serve o dicionário de dados?', o:['Descrever cada campo: nome, tipo, tamanho, obrigatório, chave e descrição','Traduzir o banco para o inglês','Guardar as senhas dos usuários','Listar palavras proibidas no sistema'], c:0, e:'É o manual do banco para toda a equipe.'}],
+ templo:[
+  {q:'Um colega pede a lista de telefones dos clientes para vender rifa. O que você faz?', o:['Não passa: o dado pessoal é só para o serviço da barbearia','Passa, porque já está no sistema','Passa só metade da lista','Posta no grupo da turma'], c:0, e:'Sigilo no tratamento de dados: só para a finalidade combinada.'},
+  {q:'Qual lei brasileira protege os dados pessoais?', o:['LGPD','CLT','ECA','Lei do Inquilinato'], c:0, e:'Lei Geral de Proteção de Dados Pessoais.'},
+  {q:'Quem deve poder ver a data de nascimento dos clientes?', o:['Só quem precisa dela para o trabalho','Qualquer usuário do app','Todo mundo da escola','Quem pedir com educação'], c:0, e:'É isso que as permissões do SGBD controlam.'}],
+ caverna:[
+  {q:'Chave primária (PK) é...', o:['O campo que identifica cada registro, sem repetir e sem ficar vazio','O primeiro campo que aparece na tabela','A senha do banco de dados','O campo mais importante para o cliente'], c:0, e:'Única e obrigatória.'},
+  {q:'Por que o NOME do cliente não é uma boa chave primária?', o:['Nomes repetem e podem mudar','Nome é texto, e chave só pode ser número','Nome é dado sigiloso','Porque é muito curto'], c:0, e:'Duas "Ana Souza" quebrariam a chave.'},
+  {q:'agendamento.cliente_id guarda o id de um cliente. Esse campo é...', o:['Uma chave estrangeira (FK)','Uma chave primária (PK)','Um tipo de dado','Um dicionário de dados'], c:0, e:'FK aponta para a PK de outra tabela.'},
+  {q:'O SGBD deixa criar um agendamento para o cliente_id 999, que não existe?', o:['Não: a FK garante a integridade referencial','Sim, sempre','Só se o preço for zero','Só de madrugada'], c:0, e:'A FK não aceita apontar para o nada.'}],
+ ponte:[
+  {q:'Quais são as três peças do MER?', o:['Entidade, atributo e relacionamento','Tabela, Python e SQL','Linha, coluna e célula','Cliente, servidor e rede'], c:0, e:'Entidade vira tabela, atributo vira campo.'},
+  {q:'"Um cliente faz vários agendamentos; cada agendamento é de um só cliente." Cardinalidade?', o:['1:N','1:1','N:N','0:0'], c:0, e:'Um de um lado, vários do outro.'},
+  {q:'"Um aluno está em várias turmas e uma turma tem vários alunos." Cardinalidade?', o:['N:N','1:N','1:1','N:1'], c:0, e:'Vários dos dois lados.'},
+  {q:'Na hora de criar as tabelas, um relacionamento N:N vira...', o:['Uma tabela associativa no meio, com as duas FKs','Um campo de texto com vírgulas','Duas PKs na mesma tabela','Nada: fica como está'], c:0, e:'É o segredo do Dragão N:N...'},
+  {q:'Em "o barbeiro ATENDE o agendamento", a palavra "atende" é...', o:['Um relacionamento','Uma entidade','Um atributo','Um tipo de dado'], c:0, e:'Verbos que ligam entidades viram relacionamentos.'}]
+};
+// ===================== NÍVEL FÁCIL =====================
+const L_FACIL = {id:'facil', nome:'Fácil', titulo:'O Reino que Esquecia', aula:'Aula 1 • fundamentos e MER', bioma:'campo', codigo:null,
+ ind:'Ind. 1 e 2: planejar o banco conforme as regras de negócio',
+ fases:[
+ {nome:'Vila da Memória', hist:[
+  {q:'Narrador', c:'#c9b28a', cena:'caderno', t:'No Reino dos Dados existe a Barbearia Navalha de Ouro. O Seu Jair, o dono, anota tudo num caderno: nome do cliente, telefone, dia e horário.'},
+  {q:'Seu Jair', c:'#d62828', cena:'chuva', t:'Num dia de chuva, a goteira caiu bem em cima do caderno. Perdi a agenda da semana inteira! Os clientes chegaram e eu não sabia quem tinha marcado.'},
+  {q:'Seu Jair', c:'#d62828', cena:'pc', t:'Meu sobrinho fez um programa em Python. Funcionava muito bem... até eu fechar. Cadastrei 30 clientes, abri de novo e a lista estava vazia.', codigo:'clientes = []\nclientes.append("Ana Souza")\n# ... fechou o programa ...\nprint(clientes)   # []  vazio de novo!'},
+  {q:'Velho Programador', c:'#c9b28a', cena:'ram', t:'Isso acontece porque as variáveis moram na memória RAM. Ela é rápida, mas é apagada quando o programa fecha. Para os dados sobreviverem, precisamos de PERSISTÊNCIA: guardar em disco.'},
+  {q:'Seu Jair', c:'#d62828', cena:'planilha', t:'Aí eu passei tudo para o Excel! Fecho, abro de novo e os dados continuam lá. Problema resolvido... será?', tabela:[['Data','Cliente','Telefone','Serviços','Valor'],['16/11','Ana Souza','99999-1111','Corte, Barba','R$ 60'],['16-11-2026','ana souza','99999-1112','Sobrancelha','15'],['17/11','Ana Souza','99999-1111','Corte','trinta e cinco']]},
+  {q:'Velho Programador', c:'#c9b28a', cena:'planilha', t:'A planilha já é persistência: o arquivo fica no disco. Mas olhe: a Ana repetida, com nome e telefone diferentes; dois serviços numa célula só; valor escrito como texto. A SOMA nem consegue somar!'},
+  {q:'Velho Programador', c:'#c9b28a', cena:'tabela', t:'Dá para melhorar: uma aba para cada coisa, com um ID que nunca repete, e PROCV para buscar os nomes. Repare: isso já é pensar como um banco de dados.', tabela:[['No Excel','No banco de dados'],['Aba','Tabela'],['Linha','Registro'],['Coluna','Campo'],['ID que não repete','Chave primária (PK)'],['ID de outra aba + PROCV','Chave estrangeira (FK) + JOIN'],['Validação de dados','Restrição']]},
+  {q:'Velho Programador', c:'#c9b28a', cena:'servidor', t:'Mas a planilha deixa apagar uma cliente que tem histórico, aceita dois clientes no mesmo horário e, com quatro pessoas editando ao mesmo tempo, um salva por cima do outro. Por isso vamos MIGRAR para um BANCO DE DADOS, cuidado por um gerente: o SGBD.'},
+  {q:'Velho Programador', c:'#c9b28a', cena:'mapa', t:'Sua missão: aprender a PLANEJAR o banco da barbearia. O caminho tem quatro regiões. Comece pela vila e passe pela Feira das Planilhas antes da Torre. Em cada lugar há um pergaminho para estudar antes da batalha.'}],
+  lugares:{
+   vila:{x:50,y:130,nome:'Vila da Memória',ic:'vila',tipo:'batalha',card:0,npc:'Velho Programador',npcCor:'#c9b28a',fala:'O Bug do Esquecimento apagou o cadastro da vila. Leia o pergaminho e derrote-o.',inimigo:['Bug do Esquecimento','#9b5de5','#f15bb5'],qs:'vila'},
+   mercado:{x:150,y:150,nome:'Mercado das Informações',ic:'mercado',tipo:'batalha',npc:'Feirante',npcCor:'#f4a261',fala:'Aqui todo mundo grita números soltos: "45!", "16/11!", "Ana!". Só vence quem sabe transformar dado em informação.',inimigo:['Papagaio dos Dados Soltos','#2a9d8f','#e9c46a'],qs:'mercado'},
+   planilha:{x:150,y:82,nome:'Feira das Planilhas',ic:'planilha',tipo:'batalha',card:5,npc:'Contadora',npcCor:'#38b000',fala:'Aqui todo mundo faz tudo no Excel. O Gremlin do #N/D bagunça as abas: mostre que você sabe organizar a planilha como um banco e quando é hora de migrar.',inimigo:['Gremlin do #N/D','#38b000','#ff006e'],qs:'planilha'},
+   torre:{x:240,y:60,nome:'Torre do SGBD',ic:'torre',tipo:'batalha',card:1,npc:'Maga do SGBD',npcCor:'#7b4fc9',fala:'Nesta torre mora o gerente dos dados. Um Golem feito de arquivos .txt quer derrubá-la.',inimigo:['Golem do Arquivo .txt','#8d99ae','#ef233c'],qs:'torre'}},
+  pre:{vila:[],mercado:['vila'],planilha:['vila'],torre:['planilha']}, edges:[['vila','mercado'],['vila','planilha'],['planilha','torre']], saida:'torre'},
+ {nome:'Floresta das Tabelas', hist:[
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'tabela', t:'Lembram das matrizes da UC1? Linhas e colunas. Uma tabela de banco é parecida, mas cada coluna tem NOME e TIPO.', tabela:[['id','nome','telefone','nascimento'],['1','Ana Souza','99999-1111','10/05/2001'],['2','Bia Lima','98888-2222','22/09/1999']]},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'tabela', t:'Cada LINHA é um registro: a Ana inteira. Cada COLUNA é um campo: o telefone de todo mundo. A tabela inteira guarda um tipo de coisa: clientes.'},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'tipos', t:'Cada campo tem um tipo. Escolher o tipo certo evita erro: ninguém consegue escrever "abc" num campo de data.', tabela:[['Dado','Tipo'],['Nome, telefone','VARCHAR (texto)'],['Quantidade, minutos','INTEGER (inteiro)'],['Preço com centavos','NUMERIC(6,2)'],['Data / hora','DATE / TIME'],['Sim ou não','BOOLEAN']]},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'livro', t:'A equipe toda precisa saber o que é cada campo. Para isso existe o DICIONÁRIO DE DADOS: o manual do banco.', tabela:[['Campo','Tipo','Obrig.','Chave','Descrição'],['telefone','VARCHAR(15)','sim','único','celular do cliente']]},
+  {q:'Monge do Sigilo', c:'#e9c46a', cena:'cadeado', t:'E lembrem: telefone e data de nascimento são dados pessoais. Quem trabalha com banco guarda sigilo. É o que pede a LGPD.'}],
+  lugares:{
+   floresta:{x:60,y:60,nome:'Floresta das Tabelas',ic:'floresta',tipo:'batalha',card:2,npc:'Guardiã das Tabelas',npcCor:'#3a9d5d',fala:'Um Slime anda duplicando tudo por aqui!',inimigo:['Slime Duplicado','#80ed99','#22577a'],qs:'floresta'},
+   biblioteca:{x:220,y:140,nome:'Biblioteca do Dicionário',ic:'biblioteca',tipo:'batalha',npc:'Bibliotecário',npcCor:'#8d6e63',fala:'Os livros do dicionário de dados foram embaralhados por uma Traça. Ajude a pôr cada campo no lugar.',inimigo:['Traça dos Tipos','#cdb4db','#3d405b'],qs:'biblioteca'},
+   templo:{x:70,y:150,nome:'Templo do Sigilo',ic:'templo',tipo:'batalha',extra:true,npc:'Monge do Sigilo',npcCor:'#e9c46a',fala:'Caminho opcional. A Sombra do Vazamento quer espalhar os telefones dos clientes.',inimigo:['Sombra do Vazamento','#3d3d5c','#ffd166'],qs:'templo'}},
+  pre:{floresta:[],biblioteca:['floresta'],templo:['floresta']}, edges:[['floresta','biblioteca'],['floresta','templo']], saida:'biblioteca'},
+ {nome:'Montanhas das Chaves', hist:[
+  {q:'Seu Jair', c:'#d62828', cena:'dupla', t:'Tenho um problema: duas clientes chamadas Ana Souza! Quando uma marca horário, eu não sei qual das duas é.', tabela:[['nome','telefone'],['Ana Souza','99999-1111'],['Ana Souza','97777-3333']]},
+  {q:'Ferreira de Chaves', c:'#e76f51', cena:'chave', t:'Por isso cada registro ganha um código único que nunca muda: a CHAVE PRIMÁRIA (PK). Nome repete; telefone muda; o id não.', tabela:[['id (PK)','nome','telefone'],['1','Ana Souza','99999-1111'],['2','Ana Souza','97777-3333']]},
+  {q:'Ferreira de Chaves', c:'#e76f51', cena:'chave', t:'Para ligar o agendamento à cliente certa, o agendamento guarda o id dela: cliente_id. Isso é a CHAVE ESTRANGEIRA (FK).', tabela:[['id','cliente_id (FK)','data','hora'],['120','2','16/11','19:00']]},
+  {q:'Construtor de Pontes', c:'#219ebc', cena:'mer', t:'Antes de criar tabelas, desenhamos o MER: ENTIDADES (caixas), RELACIONAMENTOS (linhas) e CARDINALIDADE (1 e N nas pontas).', codigo:'CLIENTE 1 ─────── N AGENDAMENTO\n"um cliente faz vários agendamentos;\n cada agendamento é de um só cliente"'},
+  {q:'Sentinela', c:'#adb5bd', cena:'portao', t:'No fim das montanhas fica o Portão do Mestre. Só passa quem já explicou o seu tema para a turma. O código, só o Mestre sabe.'}],
+  lugares:{
+   caverna:{x:220,y:40,nome:'Caverna das Chaves',ic:'caverna',tipo:'batalha',card:3,npc:'Ferreira de Chaves',npcCor:'#e76f51',fala:'Cuidado com o Mímico Sem Chave: ele se disfarça de registro.',inimigo:['Mímico Sem Chave','#bc6c25','#fefae0'],qs:'caverna'},
+   ponte:{x:120,y:80,nome:'Ponte do MER',ic:'ponte',tipo:'batalha',card:4,npc:'Construtor de Pontes',npcCor:'#219ebc',fala:'O Troll da Cardinalidade só deixa passar quem sabe contar: 1:1? 1:N? N:N?',inimigo:['Troll da Cardinalidade','#606c38','#dda15e'],qs:'ponte'},
+   portao:{x:40,y:120,nome:'Portão do Mestre',ic:'portao',tipo:'portao',codigo:'NAVALHA',npc:'Sentinela',npcCor:'#adb5bd',fala:'Alto lá! Peça o código ao Mestre (seu professor).'}},
+  pre:{caverna:[],ponte:['caverna'],portao:['ponte']}, edges:[['caverna','ponte'],['ponte','portao']], saida:'portao'},
+ {nome:'Vale da Barbearia', hist:[
+  {q:'Seu Jair', c:'#d62828', cena:'barbearia', t:'Agora sim! Vou ditar as regras da minha barbearia. Vocês transformam em banco de dados.'},
+  {q:'Narrador', c:'#c9b28a', cena:'mapa', t:'O caminho do planejamento: 1) ler as regras de negócio; 2) achar as entidades; 3) atributos e chaves; 4) relacionamentos; 5) dicionário de dados.'},
+  {q:'Narrador', c:'#c9b28a', cena:'dragao', t:'Dizem que no castelo mora um Dragão que muda as regras no meio do caminho. Ele só cai quando a turma inteira luta junta.'}],
+  lugares:{
+   barbearia:{x:250,y:100,nome:'Barbearia Navalha de Ouro',ic:'barbearia',tipo:'missoes',miss:'barbearia',npc:'Seu Jair',npcCor:'#d62828',fala:'Leia as minhas regras e monte o banco comigo.'},
+   castelo:{x:80,y:60,nome:'Castelo do Dragão N:N',ic:'castelo',tipo:'chefao',chefe:'dragao',codigo:'DRAGAO',npc:'Sentinela do Castelo',npcCor:'#6a040f',fala:'O Dragão N:N acordou. O Chefão se enfrenta em EQUIPE, no quadro. Peça o código ao Mestre.'}},
+  pre:{barbearia:[],castelo:['barbearia']}, edges:[['barbearia','castelo']]}
+ ]};
+// ===================== NÍVEL MÉDIO =====================
+const L_MEDIO = {id:'medio', nome:'Médio', titulo:'As Terras da Modelagem', aula:'Normalização, requisitos e modelo relacional', bioma:'savana', codigo:'MODELO',
+ ind:'Ind. 2 e 4: planejar e modelar o banco',
+ fases:[
+ {nome:'Planície da Planilha', hist:[
+  {q:'Seu Jair', c:'#d62828', cena:'planilha', t:'Antes do banco, meu sobrinho passou o caderno para uma planilha. Ficou assim:', tabela:[['cliente','telefone','servicos','barbeiro','data'],['Ana Souza','99999-1111','Corte, Barba','Carlos','16/11'],['Ana Souza','99999-1111','Corte','Rui','23/11'],['Bia Lima','98888-2222','Barba','Carlos','16/11']]},
+  {q:'Velho Programador', c:'#c9b28a', cena:'planilha', t:'Parece prático. Mas quantas barbas o Carlos fez no mês? Com "Corte, Barba" no mesmo campo, ninguém consegue contar direito.'},
+  {q:'Velho Programador', c:'#c9b28a', cena:'balanca', t:'Regra da 1ª FORMA NORMAL (1FN): cada campo guarda UM valor só (valor atômico), sem listas e sem grupos repetidos.', tabela:[['agendamento','servico'],['1','Corte'],['1','Barba'],['2','Corte']]},
+  {q:'Velho Programador', c:'#c9b28a', cena:'planilha', t:'Agora veja o telefone da Ana repetido em várias linhas. Se ela trocar de número e alguém mudar só uma linha, o banco fica com dois telefones para a mesma pessoa. Isso é uma ANOMALIA DE ATUALIZAÇÃO.'},
+  {q:'Velho Programador', c:'#c9b28a', cena:'balanca', t:'Existem também anomalias de INSERÇÃO (não consigo cadastrar um barbeiro sem um agendamento) e de EXCLUSÃO (apago o único agendamento da Bia e perco o telefone dela). NORMALIZAR é separar os dados para que cada informação fique em UM lugar só.'}],
+  lugares:{
+   campo:{x:60,y:130,nome:'Campo da 1FN',ic:'campo',tipo:'batalha',npc:'Espantalho',npcCor:'#e9c46a',fala:'O Corvo da Vírgula enfiou vários valores no mesmo campo. Espante-o!',inimigo:['Corvo da Vírgula','#2b2d42','#ef233c'],qs:'m_1fn'},
+   poco:{x:230,y:60,nome:'Poço das Anomalias',ic:'poco',tipo:'batalha',npc:'Aguadeira',npcCor:'#4cc9f0',fala:'Do fundo do poço saem três monstros: Inserção, Atualização e Exclusão. Saiba o nome de cada um.',inimigo:['Trio das Anomalias','#7209b7','#4cc9f0'],qs:'m_anom'}},
+  pre:{campo:[],poco:['campo']}, edges:[['campo','poco']], saida:'poco'},
+ {nome:'Vale das Dependências', hist:[
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'chave', t:'Depois da 1FN, perguntamos: de qual campo cada informação DEPENDE? Quem decide o valor de quem?'},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'tabela', t:'Nesta tabela a chave é a dupla (agendamento_id, servico_id). Mas nome_servico depende SÓ de servico_id: só de metade da chave.', tabela:[['agendamento_id','servico_id','nome_servico','preco_cobrado'],['1','1','Corte','35,00'],['1','2','Barba','25,00']]},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'balanca', t:'2ª FORMA NORMAL (2FN): estar na 1FN e todo campo depender da chave INTEIRA. Solução: nome_servico vai morar na tabela servico.'},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'tabela', t:'Agora esta: cidade depende do cep, e o cep depende do id. Uma dependência em cadeia (transitiva): id → cep → cidade.', tabela:[['id','nome','cep','cidade'],['1','Ana Souza','85501-000','Pato Branco']]},
+  {q:'Guardiã das Tabelas', c:'#3a9d5d', cena:'balanca', t:'3ª FORMA NORMAL (3FN): estar na 2FN e nenhum campo depender de outro campo que não é chave. Resumo: 1FN um valor por campo; 2FN depende da chave toda; 3FN depende só da chave.'}],
+  lugares:{
+   moinho:{x:60,y:60,nome:'Moinho da 2FN',ic:'moinho',tipo:'batalha',npc:'Moleira',npcCor:'#f4a261',fala:'O Meio-Chave só obedece a metade da chave. Mostre a ele a 2FN.',inimigo:['Fantasma Meio-Chave','#adb5bd','#4361ee'],qs:'m_2fn'},
+   pico:{x:220,y:140,nome:'Pico da 3FN',ic:'montanha',tipo:'batalha',npc:'Alpinista',npcCor:'#90be6d',fala:'No pico vive a Corrente Transitiva: um campo preso em outro campo que não é chave.',inimigo:['Corrente Transitiva','#6c757d','#ffbe0b'],qs:'m_3fn'}},
+  pre:{moinho:[],pico:['moinho']}, edges:[['moinho','pico']], saida:'pico'},
+ {nome:'Cartório dos Requisitos', hist:[
+  {q:'Escrivã', c:'#9d4edd', cena:'cartorio', t:'Todo banco começa numa conversa. LEVANTAMENTO DE REQUISITOS é ouvir o cliente, observar o trabalho e ler os documentos que ele já usa: fichas, notas, cadernos.'},
+  {q:'Escrivã', c:'#9d4edd', cena:'livro', t:'Das conversas saem as REGRAS DE NEGÓCIO: frases claras e numeradas que dizem o que pode e o que não pode.', tabela:[['Regra','Texto'],['RN01','Todo cliente tem nome e telefone.'],['RN02','Um cliente pode ter vários agendamentos.']]},
+  {q:'Escrivã', c:'#9d4edd', cena:'cartorio', t:'"Um barbeiro não pode ter dois agendamentos no mesmo horário" é regra de negócio: dá para verificar e vira estrutura no banco. "O sistema deve ser rápido" é requisito não funcional: importante, mas não vira tabela.'},
+  {q:'Escrivã', c:'#9d4edd', cena:'livro', t:'Cada campo do modelo entra no dicionário de dados: nome, tipo, tamanho, obrigatório, chave, DOMÍNIO (valores permitidos) e descrição.', tabela:[['Campo','Tipo','Obrig.','Domínio'],['status','VARCHAR(10)','sim','marcado / atendido / cancelado']]},
+  {q:'Escrivã', c:'#9d4edd', cena:'mapa', t:'Agora é a sua vez: o sistema que você criou na UC1 também vai passar por este cartório.'}],
+  lugares:{
+   cartorio:{x:220,y:40,nome:'Cartório dos Requisitos',ic:'cartorio',tipo:'batalha',npc:'Escrivã',npcCor:'#9d4edd',fala:'O Duende do "Acho Que" inventa regras que ninguém pediu. Só fatos do cliente valem aqui.',inimigo:['Duende do Acho Que','#38b000','#ff006e'],qs:'m_req'},
+   arquivo:{x:60,y:120,nome:'Arquivo do Dicionário',ic:'biblioteca',tipo:'batalha',npc:'Arquivista',npcCor:'#8d6e63',fala:'A Traça Gigante comeu metade do dicionário. Reconstrua os campos.',inimigo:['Traça Gigante','#cdb4db','#3d405b'],qs:'m_dic'}},
+  pre:{cartorio:[],arquivo:['cartorio']}, edges:[['cartorio','arquivo']], saida:'arquivo'},
+ {nome:'Ateliê do Arquiteto', hist:[
+  {q:'Arquiteta', c:'#ff7b00', cena:'mer', t:'O MER é o desenho das ideias (modelo conceitual). O MODELO RELACIONAL é o desenho das tabelas, com PK, FK e tipos (modelo lógico). É o último passo antes do SQL.'},
+  {q:'Arquiteta', c:'#ff7b00', cena:'tabela', t:'Regra 1: cada entidade vira uma tabela; cada atributo vira um campo; o identificador vira a PK.'},
+  {q:'Arquiteta', c:'#ff7b00', cena:'chave', t:'Regra 2: em 1:N, a FK vai para o lado N. Regra 3: em N:N, cria-se uma tabela associativa com as duas FKs. Regra 4: em 1:1, a FK vai para um dos lados, com UNIQUE.', codigo:'TUTOR 1 ─── N PET            → pet.tutor_id\nCONSULTA N ─── N VACINA      → consulta_vacina(consulta_id, vacina_id)\nPET 1 ─── 1 MICROCHIP        → microchip.pet_id UNIQUE'},
+  {q:'Arquiteta', c:'#ff7b00', cena:'pet', t:'Seu desafio: modelar a Clínica Pet Patinhas. E cuidado: a Hidra da Redundância guarda a saída. A cada cabeça cortada, nasce uma tabela nova.'}],
+  lugares:{
+   atelie:{x:250,y:100,nome:'Ateliê do Arquiteto',ic:'atelie',tipo:'missoes',miss:'clinica',npc:'Arquiteta',npcCor:'#ff7b00',fala:'A Clínica Pet Patinhas mandou as regras. Vamos do MER às tabelas.'},
+   hidra:{x:80,y:60,nome:'Lago da Hidra',ic:'covil',tipo:'chefao',chefe:'hidra',codigo:'HIDRA',npc:'Barqueiro',npcCor:'#264653',fala:'A Hidra da Redundância se enfrenta em equipe. Peça o código ao Mestre.'}},
+  pre:{atelie:[],hidra:['atelie']}, edges:[['atelie','hidra']]}
+ ]};
+
+// ===================== NÍVEL DIFÍCIL =====================
+const L_DIFICIL = {id:'dificil', nome:'Difícil', titulo:'A Fortaleza do SQL', aula:'PostgreSQL, DDL e DML', bioma:'neve', codigo:'CREATE',
+ ind:'Ind. 3 e 4: desenvolver as estruturas e modelar o banco',
+ fases:[
+ {nome:'Porto do SGBD', hist:[
+  {q:'Engenheira', c:'#00b4d8', cena:'servidor', t:'Hora de construir! O modelo vira banco de verdade dentro de um SGBD. Nosso navio é o PostgreSQL.'},
+  {q:'Engenheira', c:'#00b4d8', cena:'pc', t:'O servidor PostgreSQL fica escutando numa porta (padrão 5432). Um programa cliente, como o DBeaver ou o psql, conecta informando estes dados:', tabela:[['Servidor','Porta','Banco','Usuário','Senha'],['localhost','5432','barbearia','aluno','••••']]},
+  {q:'Engenheira', c:'#00b4d8', cena:'servidor', t:'Dentro do servidor ficam vários bancos (database). Dentro de cada banco, os SCHEMAS, que funcionam como pastas. Dentro do schema, as tabelas.', codigo:'servidor\n └─ banco: barbearia\n     └─ schema: public\n         └─ tabelas: cliente, barbeiro, servico...'},
+  {q:'Engenheira', c:'#00b4d8', cena:'sql', t:'Os comandos que criam e mudam a estrutura formam a DDL: CREATE, ALTER e DROP. O primeiro de todos:', codigo:'CREATE DATABASE barbearia;'}],
+  lugares:{
+   porto:{x:60,y:130,nome:'Porto do SGBD',ic:'porto',tipo:'batalha',npc:'Engenheira',npcCor:'#00b4d8',fala:'O Kraken da Desconexão enrolou os cabos do servidor.',inimigo:['Kraken da Desconexão','#5a189a','#f72585'],qs:'d_porto'},
+   farol:{x:230,y:60,nome:'Farol da Conexão',ic:'farol',tipo:'batalha',npc:'Faroleira',npcCor:'#ffd166',fala:'Sem conexão, o navio não atraca. A Névoa apagou a luz do farol.',inimigo:['Névoa Sem Porta','#adb5bd','#023e8a'],qs:'d_farol'}},
+  pre:{porto:[],farol:['porto']}, edges:[['porto','farol']], saida:'farol'},
+ {nome:'Forja do CREATE TABLE', hist:[
+  {q:'Ferreiro', c:'#e85d04', cena:'forja', t:'Na forja, cada tabela do modelo vira um comando CREATE TABLE. Observe a tabela cliente:', codigo:'CREATE TABLE cliente (\n  id         SERIAL PRIMARY KEY,\n  nome       VARCHAR(80) NOT NULL,\n  telefone   VARCHAR(15) NOT NULL UNIQUE,\n  nascimento DATE\n);'},
+  {q:'Ferreiro', c:'#e85d04', cena:'forja', t:'SERIAL cria um número automático (1, 2, 3...). PRIMARY KEY marca a chave primária. NOT NULL obriga o preenchimento. UNIQUE proíbe repetição.'},
+  {q:'Ferreiro', c:'#e85d04', cena:'sql', t:'DEFAULT dá um valor quando ninguém informa.', codigo:"status VARCHAR(10) NOT NULL DEFAULT 'marcado'"},
+  {q:'Ferreiro', c:'#e85d04', cena:'forja', t:'Cuidado com os detalhes que mais quebram o comando: vírgula entre os campos, NENHUMA vírgula depois do último campo, parênteses fechados e ponto e vírgula no fim.'}],
+  lugares:{
+   forja:{x:60,y:60,nome:'Forja do CREATE TABLE',ic:'forja',tipo:'batalha',npc:'Ferreiro',npcCor:'#e85d04',fala:'O Elemental da Vírgula Sobrando derrete todo comando mal escrito.',inimigo:['Elemental da Vírgula','#f48c06','#370617'],qs:'d_forja'},
+   bigorna:{x:220,y:140,nome:'Bigorna dos Tipos',ic:'casa',tipo:'batalha',npc:'Aprendiz',npcCor:'#dc2f02',fala:'Cada campo precisa do tipo certo, ou a lâmina quebra.',inimigo:['Gárgula do Tipo Errado','#6c757d','#e5383b'],qs:'d_tipos'}},
+  pre:{forja:[],bigorna:['forja']}, edges:[['forja','bigorna']], saida:'bigorna'},
+ {nome:'Muralha das Restrições', hist:[
+  {q:'Guardião da Muralha', c:'#577590', cena:'muralha', t:'Restrições (constraints) são as regras de negócio DENTRO do banco. Nem o programador distraído consegue quebrá-las.', codigo:'CREATE TABLE agendamento (\n  id          SERIAL PRIMARY KEY,\n  cliente_id  INTEGER NOT NULL REFERENCES cliente(id),\n  barbeiro_id INTEGER NOT NULL REFERENCES barbeiro(id),\n  data        DATE NOT NULL,\n  hora        TIME NOT NULL,\n  UNIQUE (barbeiro_id, data, hora)\n);'},
+  {q:'Guardião da Muralha', c:'#577590', cena:'chave', t:'REFERENCES cria a chave estrangeira. Por isso a ORDEM importa: primeiro as tabelas pai (cliente, barbeiro), depois a filha (agendamento).'},
+  {q:'Guardião da Muralha', c:'#577590', cena:'muralha', t:'CHECK testa uma condição a cada gravação.', codigo:'preco NUMERIC(6,2) NOT NULL CHECK (preco > 0)'},
+  {q:'Guardião da Muralha', c:'#577590', cena:'sql', t:'Mudou de ideia? ALTER TABLE muda a estrutura sem perder os dados. DROP TABLE apaga a tabela inteira, com tudo dentro. Use com muito cuidado.', codigo:'ALTER TABLE cliente ADD COLUMN email VARCHAR(100);\nDROP TABLE teste;   -- apaga tudo!'}],
+  lugares:{
+   muralha:{x:220,y:40,nome:'Muralha das Restrições',ic:'muralha',tipo:'batalha',npc:'Guardião da Muralha',npcCor:'#577590',fala:'O Aríete do Dado Inválido quer furar a muralha. Cada restrição é um tijolo.',inimigo:['Aríete do Dado Inválido','#7f5539','#ffba08'],qs:'d_restr'},
+   vigia:{x:60,y:120,nome:'Torre de Vigia do ALTER',ic:'torre',tipo:'batalha',npc:'Vigia',npcCor:'#43aa8b',fala:'Daqui se vê quem tenta mudar a estrutura do banco sem cuidado.',inimigo:['Corvo do DROP','#212529','#d00000'],qs:'d_alter'}},
+  pre:{muralha:[],vigia:['muralha']}, edges:[['muralha','vigia']], saida:'vigia'},
+ {nome:'Torre do DML', hist:[
+  {q:'Bibliotecária', c:'#b5179e', cena:'sql', t:'Estrutura pronta! Agora entram os DADOS, com a DML. Quatro comandos: INSERT, SELECT, UPDATE e DELETE. O id não é informado: o SERIAL gera.', codigo:"INSERT INTO cliente (nome, telefone, nascimento)\nVALUES ('Ana Souza', '99999-1111', '2001-05-10');"},
+  {q:'Bibliotecária', c:'#b5179e', cena:'tabela', t:'SELECT consulta. WHERE filtra as linhas. ORDER BY ordena.', codigo:"SELECT nome, telefone\nFROM cliente\nWHERE nascimento >= '2000-01-01'\nORDER BY nome;"},
+  {q:'Bibliotecária', c:'#b5179e', cena:'sql', t:'UPDATE altera. Sem WHERE, TODOS os clientes ficariam com o mesmo telefone!', codigo:"UPDATE cliente SET telefone = '98888-0000'\nWHERE id = 7;"},
+  {q:'Bibliotecária', c:'#b5179e', cena:'fogo', t:'DELETE apaga linhas. DELETE sem WHERE apaga a tabela inteira: é o monstro mais temido da torre. Antes de UPDATE ou DELETE, rode um SELECT com o mesmo WHERE para conferir.', codigo:'DELETE FROM agendamento WHERE id = 120;'}],
+  lugares:{
+   torredml:{x:250,y:100,nome:'Torre do DML',ic:'torre',tipo:'batalha',npc:'Bibliotecária',npcCor:'#b5179e',fala:'O Mago do SELECT Perdido devolve tudo bagunçado. Escreva as consultas certas.',inimigo:['Mago do SELECT Perdido','#3a0ca3','#4cc9f0'],qs:'d_dml1'},
+   sala:{x:160,y:150,nome:'Sala do WHERE',ic:'casa',tipo:'batalha',npc:'Porteiro',npcCor:'#6a4c93',fala:'Aqui mora quem esquece o WHERE. Não seja essa pessoa.',inimigo:['Sombra Sem WHERE','#240046','#ff4d6d'],qs:'d_dml2'},
+   golem:{x:80,y:60,nome:'Covil do Golem',ic:'covil',tipo:'chefao',chefe:'golem',codigo:'WHERE',npc:'Sentinela',npcCor:'#495057',fala:'O Golem do DELETE sem WHERE acordou. Enfrentem em equipe. Peça o código ao Mestre.'}},
+  pre:{torredml:[],sala:['torredml'],golem:['sala']}, edges:[['torredml','sala'],['sala','golem']]}
+ ]};
+// ===================== NÍVEL EXPERT =====================
+const L_EXPERT = {id:'expert', nome:'Expert', titulo:'A Cidadela da Persistência', aula:'Consultas, Python + banco, permissões e backup', bioma:'cristal', codigo:'PYTHON',
+ ind:'Ind. 5 e 6: avaliar a persistência e operar permissões e backup',
+ fases:[
+ {nome:'Biblioteca das Consultas', hist:[
+  {q:'Sábia', c:'#4895ef', cena:'livro', t:'Os dados estão em tabelas separadas, como aprendemos. Para responder às perguntas do dono, juntamos as tabelas com JOIN.', codigo:'SELECT c.nome, a.data, a.hora\nFROM agendamento a\nJOIN cliente c ON c.id = a.cliente_id;'},
+  {q:'Sábia', c:'#4895ef', cena:'chave', t:'O ON diz como as tabelas se ligam: quase sempre a FK de uma com a PK da outra.'},
+  {q:'Sábia', c:'#4895ef', cena:'tabela', t:'GROUP BY junta as linhas em grupos. COUNT, SUM e AVG resumem cada grupo.', codigo:'SELECT b.nome, COUNT(*) AS atendimentos\nFROM agendamento a\nJOIN barbeiro b ON b.id = a.barbeiro_id\nGROUP BY b.nome;'},
+  {q:'Sábia', c:'#4895ef', cena:'balanca', t:'WHERE filtra as LINHAS antes de agrupar. HAVING filtra os GRUPOS depois.', codigo:'... GROUP BY b.nome\nHAVING COUNT(*) > 10;'},
+  {q:'Sábia', c:'#4895ef', cena:'pc', t:'E uma VIEW é uma consulta salva com nome. O dono abre o "painel" sem saber SQL.', codigo:'CREATE VIEW painel_barbeiros AS\nSELECT b.nome, COUNT(*) AS atendimentos ...;'}],
+  lugares:{
+   biblio:{x:60,y:130,nome:'Biblioteca das Consultas',ic:'biblioteca',tipo:'batalha',npc:'Sábia',npcCor:'#4895ef',fala:'O Labirinto do JOIN prende quem não sabe ligar as tabelas.',inimigo:['Minotauro do JOIN','#7f4f24','#ffd60a'],qs:'e_join'},
+   salao:{x:230,y:60,nome:'Salão dos Grupos',ic:'templo',tipo:'batalha',npc:'Contador',npcCor:'#52b788',fala:'O Enxame do GROUP BY só se dispersa com a função certa.',inimigo:['Enxame Agrupado','#ffb703','#023047'],qs:'e_group'}},
+  pre:{biblio:[],salao:['biblio']}, edges:[['biblio','salao']], saida:'salao'},
+ {nome:'Ponte Python–Banco', hist:[
+  {q:'Engenheiro', c:'#2a9d8f', cena:'python', t:'Lembram do programa da UC1 que esquecia tudo? Agora ele vai conversar com o banco. Isso é persistência de verdade.', codigo:"import psycopg2\ncon = psycopg2.connect(host='localhost', dbname='barbearia',\n                       user='caixa', password='****')\ncur = con.cursor()"},
+  {q:'Engenheiro', c:'#2a9d8f', cena:'python', t:'Os %s são parâmetros: o SGBD recebe os valores separados do comando. Depois, commit confirma a gravação.', codigo:'cur.execute(\n  "INSERT INTO cliente (nome, telefone) VALUES (%s, %s)",\n  (nome, telefone))\ncon.commit()'},
+  {q:'Engenheiro', c:'#2a9d8f', cena:'fogo', t:'NUNCA monte o SQL somando textos. Alguém digita um pedaço de SQL no campo "nome" e invade o banco. Esse ataque se chama SQL INJECTION.', codigo:'# ERRADO, perigoso:\ncur.execute("INSERT ... VALUES (\'" + nome + "\')")'},
+  {q:'Engenheiro', c:'#2a9d8f', cena:'cadeado', t:'Se o banco recusar (telefone repetido, por exemplo), o Python recebe um erro. Trate com try/except e mostre uma mensagem clara. No fim: cur.close() e con.close().'},
+  {q:'Engenheiro', c:'#2a9d8f', cena:'ram', t:'O teste da persistência: cadastre, FECHE o programa, abra de novo e liste. Os dados continuam lá? Então o sistema persiste de verdade.'}],
+  lugares:{
+   pontepy:{x:60,y:60,nome:'Ponte do Cursor',ic:'ponte',tipo:'batalha',npc:'Engenheiro',npcCor:'#2a9d8f',fala:'A Serpente da Injeção se esconde nos textos concatenados.',inimigo:['Serpente da Injeção','#55a630','#ff0054'],qs:'e_py'},
+   lab:{x:220,y:140,nome:'Laboratório do Teste',ic:'lab',tipo:'batalha',npc:'Testadora',npcCor:'#90e0ef',fala:'Aqui avaliamos se o software persiste os dados como planejado.',inimigo:['Gremlin do Commit Esquecido','#8338ec','#ffbe0b'],qs:'e_teste'}},
+  pre:{pontepy:[],lab:['pontepy']}, edges:[['pontepy','lab']], saida:'lab'},
+ {nome:'Quartel das Permissões', hist:[
+  {q:'Capitã', c:'#9b2226', cena:'cadeado', t:'Nem todo mundo pode tudo. O caixa registra atendimentos; só o dono muda preços. O SGBD controla isso com USUÁRIOS (roles) e PERMISSÕES.', codigo:"CREATE ROLE caixa LOGIN PASSWORD '****';"},
+  {q:'Capitã', c:'#9b2226', cena:'chave', t:'GRANT dá permissão. REVOKE retira. Esses comandos formam a DCL (controle de dados).', codigo:'GRANT SELECT, INSERT ON agendamento TO caixa;\nGRANT SELECT ON servico TO caixa;\nREVOKE INSERT ON agendamento FROM caixa;'},
+  {q:'Capitã', c:'#9b2226', cena:'muralha', t:'Se o caixa tentar UPDATE servico SET preco = 1; o banco responde "permission denied". É a regra de negócio protegida dentro do SGBD.'},
+  {q:'Capitã', c:'#9b2226', cena:'cadeado', t:'PRINCÍPIO DO MENOR PRIVILÉGIO: cada usuário recebe só o que precisa. O app em Python não conecta como superusuário, e senha não vai escrita no código que sobe para o GitHub.'}],
+  lugares:{
+   quartel:{x:220,y:40,nome:'Quartel das Permissões',ic:'muralha',tipo:'batalha',npc:'Capitã',npcCor:'#9b2226',fala:'O Espião Superusuário quer acesso a tudo. Distribua as permissões certas.',inimigo:['Espião Superusuário','#212529','#e63946'],qs:'e_perm'},
+   cripta:{x:60,y:120,nome:'Cripta do Sigilo',ic:'templo',tipo:'batalha',npc:'Guardiã do Sigilo',npcCor:'#e9c46a',fala:'Dados pessoais exigem cuidado redobrado.',inimigo:['Vulto do Vazamento','#3d3d5c','#ffd166'],qs:'e_sigilo'}},
+  pre:{quartel:[],cripta:['quartel']}, edges:[['quartel','cripta']], saida:'cripta'},
+ {nome:'Cofre do Backup', hist:[
+  {q:'Guardiã do Cofre', c:'#ffb703', cena:'cofre', t:'HD queimado, DELETE errado, vírus... Sem cópia, o reino perde tudo. BACKUP é a cópia de segurança; RESTORE é a volta.'},
+  {q:'Guardiã do Cofre', c:'#ffb703', cena:'pc', t:'O pg_dump gera um arquivo com a estrutura e os dados do banco.', codigo:'pg_dump -U postgres -d barbearia -f barbearia_2026-11-30.sql'},
+  {q:'Guardiã do Cofre', c:'#ffb703', cena:'servidor', t:'Para restaurar um arquivo .sql, rodamos o arquivo num banco vazio com o psql. Backups no formato custom (.backup) voltam com o pg_restore.', codigo:'createdb -U postgres barbearia_nova\npsql -U postgres -d barbearia_nova -f barbearia_2026-11-30.sql'},
+  {q:'Guardiã do Cofre', c:'#ffb703', cena:'cofre', t:'Regra 3-2-1: 3 cópias, em 2 mídias diferentes, 1 fora do local (outro prédio ou nuvem). E backup que nunca foi testado não é backup.'},
+  {q:'Guardiã do Cofre', c:'#ffb703', cena:'dragao', t:'Atualizar o banco (um ALTER TABLE, uma versão nova) se faz assim: backup antes, horário combinado, teste depois. No fundo do cofre, o Dragão do Apagão espera.'}],
+  lugares:{
+   cofre:{x:250,y:100,nome:'Cofre do Backup',ic:'cofre',tipo:'batalha',npc:'Guardiã do Cofre',npcCor:'#ffb703',fala:'O Ladrão de Cópias quer que você nunca teste o backup.',inimigo:['Ladrão de Cópias','#495057','#ffd60a'],qs:'e_backup'},
+   apagao:{x:80,y:60,nome:'Covil do Dragão do Apagão',ic:'covil',tipo:'chefao',chefe:'apagao',codigo:'APAGAO',npc:'Sentinela',npcCor:'#6a040f',fala:'O Dragão do Apagão derrubou o servidor. Enfrentem em equipe. Peça o código ao Mestre.'}},
+  pre:{cofre:[],apagao:['cofre']}, edges:[['cofre','apagao']]}
+ ]};
+Object.assign(Q,{
+ mercado:[
+  {q:'O feirante grita "45!". Isso é...', o:['Um dado solto, sem contexto','Uma informação completa','Um banco de dados','Uma chave primária'], c:0, e:'Sem contexto, 45 pode ser preço, idade ou minutos.'},
+  {q:'Qual frase transforma os dados em informação útil para o Seu Jair?', o:['"O Carlos fez 12 cortes hoje, total de R$ 420,00"','"12"','"Carlos"','"420"'], c:0, e:'Informação é o dado organizado que ajuda a decidir.'},
+  {q:'Banco de dados é...', o:['Um conjunto organizado de dados relacionados, guardado de forma permanente','Uma pasta cheia de arquivos soltos','O mesmo que a memória RAM','Um programa de editar texto'], c:0, e:'Organizado, relacionado e permanente.'}],
+ biblioteca:[
+  {q:'Melhor tipo para a duração de um serviço em minutos (30, 45)?', o:['INTEGER','VARCHAR','DATE','BOOLEAN'], c:0, e:'Número inteiro, sem casas decimais.'},
+  {q:'Por que o telefone é VARCHAR e não INTEGER?', o:['Tem hífen, parênteses e zero à esquerda, e ninguém faz conta com ele','Porque INTEGER não existe','Porque telefone é chave primária','Porque é mais bonito'], c:0, e:'Código de texto, não quantidade.'},
+  {q:'Num dicionário de dados, a coluna "Obrigatório" diz...', o:['Se o campo pode ficar vazio ou não','Quem é o dono do campo','A cor do campo na tela','O preço do campo'], c:0, e:'Obrigatório = NOT NULL lá no SQL.'}],
+ m_1fn:[
+  {q:'Na planilha da barbearia, qual célula quebra a 1FN?', o:['"Corte, Barba" no campo servicos','"Ana Souza" no campo cliente','"16/11" no campo data','"Carlos" no campo barbeiro'], c:0, e:'Dois valores no mesmo campo.'},
+  {q:'Como corrigir o "Corte, Barba"?', o:['Separar: um registro para cada serviço do agendamento','Trocar a vírgula por ponto e vírgula','Escrever tudo em maiúsculas','Apagar a barba'], c:0, e:'Cada serviço vira uma linha própria (depois, uma tabela própria).'},
+  {q:'A 1ª Forma Normal exige...', o:['Valores atômicos: um valor por campo, sem grupos repetidos','Que a tabela tenha só 1 linha','Que o banco tenha só 1 tabela','Que o primeiro campo seja o nome'], c:0, e:'Atômico = indivisível.'}],
+ m_anom:[
+  {q:'A Ana trocou de telefone, mas só 1 das 10 linhas dela foi corrigida. Anomalia de...', o:['atualização','inserção','exclusão','backup'], c:0, e:'A mesma informação repetida ficou diferente.'},
+  {q:'Para cadastrar um barbeiro novo, a planilha exige inventar um agendamento. Anomalia de...', o:['inserção','atualização','exclusão','conexão'], c:0, e:'Não dá para inserir um dado sem o outro.'},
+  {q:'Apagamos o único agendamento da Bia e perdemos o telefone dela. Anomalia de...', o:['exclusão','inserção','atualização','consulta'], c:0, e:'Apagar uma coisa levou junto outra.'},
+  {q:'O que a normalização busca?', o:['Cada informação guardada em um lugar só, sem repetição desnecessária','Deixar o banco com uma tabela só','Apagar dados antigos','Pôr as tabelas em ordem alfabética'], c:0, e:'Menos repetição, menos inconsistência.'}],
+ m_2fn:[
+  {q:'agendamento_servico tem PK = (agendamento_id, servico_id). Qual campo quebra a 2FN?', o:['nome_servico','preco_cobrado','agendamento_id','servico_id'], c:0, e:'nome_servico depende só de servico_id, metade da chave.'},
+  {q:'A 2FN só pode ser quebrada quando a chave primária é...', o:['composta (mais de um campo)','numérica','de texto','vazia'], c:0, e:'Com chave de um campo só, não existe "metade da chave".'},
+  {q:'Para corrigir, nome_servico deve ir para...', o:['a tabela servico','a tabela cliente','um campo de texto no agendamento','lugar nenhum: apagar o nome'], c:0, e:'Lá ele depende da chave inteira (servico.id).'}],
+ m_3fn:[
+  {q:'cliente(id, nome, cep, cidade): qual dependência quebra a 3FN?', o:['cidade depende de cep, que não é chave','nome depende de id','cep depende de id','id depende de nome'], c:0, e:'Dependência transitiva: id → cep → cidade.'},
+  {q:'agendamento(id, cliente_id, nome_cliente, data): o que fazer com nome_cliente?', o:['Tirar: o nome já está na tabela cliente','Deixar, porque é mais rápido','Transformar em chave primária','Trocar pelo telefone'], c:0, e:'Basta o cliente_id para buscar o nome.'},
+  {q:'A ordem certa das formas normais é...', o:['1FN → 2FN → 3FN','3FN → 2FN → 1FN','2FN → 1FN → 3FN','Não existe ordem'], c:0, e:'Cada uma exige a anterior.'}],
+ m_req:[
+  {q:'Qual é uma técnica de levantamento de requisitos?', o:['Entrevistar o dono e observar o atendimento','Escolher a cor do sistema','Instalar o PostgreSQL','Escrever o CREATE TABLE'], c:0, e:'Primeiro ouvir e observar; depois construir.'},
+  {q:'Qual frase é uma regra de negócio que vira estrutura no banco?', o:['Um cliente pode ter vários agendamentos','O sistema deve ser bonito','A tela deve abrir rápido','O botão deve ser azul'], c:0, e:'Ela revela um relacionamento 1:N.'},
+  {q:'"Todo serviço tem nome, preço e duração." O que essa regra revela?', o:['A entidade Serviço e seus atributos','Uma chave estrangeira','Um backup','Um usuário do banco'], c:0, e:'Substantivo com dados próprios = entidade.'}],
+ m_dic:[
+  {q:'No dicionário, o telefone do cliente deve ser...', o:['VARCHAR(15), obrigatório e único','INTEGER, opcional','DATE, obrigatório','BOOLEAN'], c:0, e:'Texto, obrigatório e sem repetição (RN01).'},
+  {q:'O status do agendamento só aceita "marcado", "atendido" ou "cancelado". No dicionário, isso é o...', o:['domínio (valores permitidos)','tipo BOOLEAN','backup','relacionamento'], c:0, e:'No SQL, vira um CHECK.'},
+  {q:'Para que serve a coluna "Descrição" do dicionário?', o:['Explicar para a equipe o que o campo guarda','Guardar a senha do campo','Definir a cor do campo','Nada, é enfeite'], c:0, e:'Evita que cada um entenda o campo de um jeito.'}],
+ d_porto:[
+  {q:'Qual é a porta padrão do PostgreSQL?', o:['5432','80','3306','8080'], c:0, e:'3306 é a do MySQL; 80 é da web.'},
+  {q:'Qual programa é um CLIENTE que conecta no PostgreSQL?', o:['DBeaver','Paint','VisualG','Bloco de Notas'], c:0, e:'DBeaver e psql são clientes.'},
+  {q:'A hierarquia correta é...', o:['Servidor > banco > schema > tabela','Tabela > banco > servidor > schema','Schema > servidor > tabela > banco','Banco > tabela > servidor > schema'], c:0, e:'Do maior para o menor.'}],
+ d_farol:[
+  {q:'Comando para criar um banco chamado barbearia:', o:['CREATE DATABASE barbearia;','NEW DATABASE barbearia;','MAKE barbearia;','INSERT DATABASE barbearia;'], c:0, e:'CREATE é DDL.'},
+  {q:'CREATE, ALTER e DROP pertencem a...', o:['DDL','DML','DCL','HTML'], c:0, e:'Linguagem de definição de dados.'},
+  {q:'Para conectar, além do servidor e da porta, o cliente precisa de...', o:['banco, usuário e senha','só o nome da tabela','o celular do cliente','um pendrive'], c:0, e:'Os cinco dados da conexão.'}],
+ d_forja:[
+  {q:'No CREATE TABLE, o que faz SERIAL?', o:['Gera um número inteiro automático em sequência','Ordena a tabela','Criptografa o campo','Cria várias tabelas'], c:0, e:'1, 2, 3... sem você digitar.'},
+  {q:'Qual linha deixa o nome obrigatório?', o:['nome VARCHAR(80) NOT NULL','nome VARCHAR(80) NULL','nome OBRIGATORIO','NOT nome VARCHAR(80)'], c:0, e:'NOT NULL = não pode ficar vazio.'},
+  {q:'O que está errado? CREATE TABLE servico (id SERIAL PRIMARY KEY, nome VARCHAR(40), );', o:['A vírgula depois do último campo','Falta um DROP antes','SERIAL não existe','O nome da tabela está no singular'], c:0, e:'Depois do último campo não vai vírgula.'},
+  {q:"status VARCHAR(10) DEFAULT 'marcado' significa...", o:["Se ninguém informar, o status será 'marcado'",'O status nunca pode mudar','O status é chave primária',"Só aceita o valor 'marcado'"], c:0, e:'DEFAULT é o valor padrão.'}],
+ d_tipos:[
+  {q:'Melhor tipo para preco (35,50)?', o:['NUMERIC(6,2)','INTEGER','VARCHAR(6)','TIME'], c:0, e:'Centavos exatos.'},
+  {q:'Melhor tipo para o campo "ativo" (sim/não)?', o:['BOOLEAN','VARCHAR(255)','DATE','SERIAL'], c:0, e:'Verdadeiro ou falso.'},
+  {q:'Em NUMERIC(6,2), o que significam 6 e 2?', o:['6 dígitos no total, 2 depois da vírgula','6 linhas e 2 colunas','Mínimo 6, máximo 2','6 reais e 2 centavos'], c:0, e:'Vai até 9999,99.'}],
+ d_restr:[
+  {q:'Qual trecho cria a chave estrangeira?', o:['cliente_id INTEGER REFERENCES cliente(id)','cliente_id INTEGER UNIQUE','cliente_id SERIAL','FOREIGN cliente'], c:0, e:'REFERENCES aponta para a tabela pai.'},
+  {q:'Em que ordem criar as tabelas?', o:['cliente e barbeiro antes de agendamento','agendamento antes de cliente','Tanto faz','Todas no mesmo comando'], c:0, e:'A FK precisa que a tabela pai já exista.'},
+  {q:'Como o banco garante a RN05 (barbeiro sem horário duplo)?', o:['UNIQUE (barbeiro_id, data, hora)','CHECK (hora > 0)','PRIMARY KEY (hora)','DEFAULT hora'], c:0, e:'A combinação não pode repetir.'},
+  {q:'CHECK (preco > 0) faz o quê?', o:['Recusa preço zero ou negativo','Calcula o preço','Arredonda o preço','Esconde o preço'], c:0, e:'Testa a condição a cada gravação.'}],
+ d_alter:[
+  {q:'Adicionar o campo email em cliente, sem perder dados:', o:['ALTER TABLE cliente ADD COLUMN email VARCHAR(100);','DROP TABLE cliente;','CREATE TABLE email;','UPDATE cliente ADD email;'], c:0, e:'ALTER muda a estrutura e mantém os dados.'},
+  {q:'O que DROP TABLE cliente; faz?', o:['Apaga a tabela inteira, com todos os dados','Apaga só a última linha','Esvazia o campo nome','Cria um backup'], c:0, e:'Por isso: backup antes de qualquer DROP.'},
+  {q:'Inserir agendamento com cliente_id 999 (que não existe) resulta em...', o:['Erro de violação de chave estrangeira','Cliente 999 criado sozinho','Agendamento salvo sem cliente','Nada acontece'], c:0, e:'Integridade referencial em ação.'}],
+ d_dml1:[
+  {q:'Comando para inserir um serviço:', o:["INSERT INTO servico (nome, preco, duracao_min) VALUES ('Corte', 35.00, 30);","ADD servico ('Corte');","INSERT servico = 'Corte';","CREATE servico VALUES ('Corte');"], c:0, e:'INSERT INTO tabela (campos) VALUES (valores).'},
+  {q:'Por que não informamos o id no INSERT?', o:['O SERIAL gera o id automaticamente','O id é sempre zero','O id é proibido','O id vem do telefone'], c:0, e:'O banco cuida da sequência.'},
+  {q:'Serviços com preço acima de 30, do mais barato ao mais caro:', o:['SELECT * FROM servico WHERE preco > 30 ORDER BY preco;','SELECT servico IF preco > 30;','SELECT * FROM servico ORDER BY preco > 30;','GET servico WHERE 30;'], c:0, e:'WHERE filtra, ORDER BY ordena.'},
+  {q:'No SQL, textos e datas vão entre...', o:["aspas simples: 'Ana'",'colchetes: [Ana]','asteriscos: *Ana*','nada'], c:0, e:"Ex.: WHERE nome = 'Ana'."}],
+ d_dml2:[
+  {q:'Mudar o preço do serviço 2 para 40:', o:['UPDATE servico SET preco = 40 WHERE id = 2;','UPDATE servico SET preco = 40;','CHANGE servico 2 TO 40;','INSERT servico preco 40;'], c:0, e:'SET o quê, WHERE onde.'},
+  {q:'O que faz UPDATE servico SET preco = 40; (sem WHERE)?', o:['Todos os serviços passam a custar 40','Só o primeiro muda','Sempre dá erro','Nada muda'], c:0, e:'Sem WHERE, vale para todas as linhas.'},
+  {q:'Apagar só o agendamento 120:', o:['DELETE FROM agendamento WHERE id = 120;','DELETE agendamento;','DROP TABLE agendamento;','REMOVE 120;'], c:0, e:'DELETE apaga linhas; DROP apaga a tabela.'}],
+ e_join:[
+  {q:'Para mostrar o nome do cliente em cada agendamento, uso...', o:['JOIN cliente ON cliente.id = agendamento.cliente_id','UNION cliente','ORDER BY cliente','DROP cliente'], c:0, e:'JOIN liga as tabelas.'},
+  {q:'No JOIN, a condição do ON normalmente liga...', o:['a FK de uma tabela à PK da outra','dois textos quaisquer','a data à hora','o banco ao servidor'], c:0, e:'É para isso que as chaves existem.'},
+  {q:'Para listar agendamentos com o nome do cliente E do barbeiro, eu...', o:['Faço dois JOINs: com cliente e com barbeiro','Copio os nomes para o agendamento','Uso duas consultas separadas e junto à mão','Não é possível'], c:0, e:'Pode encadear quantos JOINs precisar.'}],
+ e_group:[
+  {q:'Faturamento de cada barbeiro:', o:['SUM(preco_cobrado) com GROUP BY barbeiro','COUNT(*) sem GROUP BY','MAX(id)','ORDER BY preco'], c:0, e:'SUM soma; GROUP BY separa por barbeiro.'},
+  {q:'Mostrar só barbeiros com mais de 10 atendimentos:', o:['HAVING COUNT(*) > 10','WHERE COUNT(*) > 10','ORDER BY 10','LIMIT 10'], c:0, e:'Filtro de grupo é HAVING.'},
+  {q:'O que é uma VIEW?', o:['Uma consulta salva com nome, usada como se fosse tabela','Uma cópia de segurança','Um usuário do banco','Uma tela do Python'], c:0, e:'Ótima para painéis.'}],
+ e_py:[
+  {q:'Biblioteca usada para o Python conversar com o PostgreSQL:', o:['psycopg2','turtle','tkinter','random'], c:0, e:'Também existe a versão nova, psycopg 3.'},
+  {q:'Forma SEGURA de inserir o nome digitado:', o:['cur.execute("INSERT INTO cliente (nome) VALUES (%s)", (nome,))','cur.execute("INSERT INTO cliente (nome) VALUES (\'" + nome + "\')")','print(nome)','con.close(nome)'], c:0, e:'Parâmetros evitam SQL Injection.'},
+  {q:'Esqueci o con.commit() depois do INSERT. O que acontece?', o:['A gravação não é confirmada e se perde ao fechar a conexão','Grava em dobro','O Python trava para sempre','O banco é apagado'], c:0, e:'Sem commit, sem persistência.'}],
+ e_teste:[
+  {q:'Como testar se o sistema realmente persiste os dados?', o:['Cadastrar, fechar o programa, abrir de novo e listar','Cadastrar e olhar a variável na hora','Reiniciar o roteador','Contar as linhas do código'], c:0, e:'O teste do "fechou e abriu".'},
+  {q:'Cadastrar um cliente com telefone repetido deve terminar em...', o:['Erro tratado: o banco recusa (UNIQUE) e o programa avisa o usuário','Dois clientes com o mesmo telefone','O programa fechando sem mensagem','O cliente antigo apagado'], c:0, e:'O banco protege; o programa explica.'},
+  {q:'Onde tratar o erro que o banco devolve no Python?', o:['Num try/except em volta do execute, com mensagem clara','Ignorar, o usuário entende','Apagar a tabela','Desligar o UNIQUE'], c:0, e:'E registrar o que aconteceu.'}],
+ e_perm:[
+  {q:'Criar um usuário "caixa" que pode fazer login:', o:["CREATE ROLE caixa LOGIN PASSWORD '****';",'INSERT INTO usuarios caixa;','GRANT caixa;','NEW USER caixa;'], c:0, e:'No PostgreSQL, usuários são roles.'},
+  {q:'Deixar o caixa consultar e inserir agendamentos:', o:['GRANT SELECT, INSERT ON agendamento TO caixa;','REVOKE ALL ON agendamento FROM caixa;','GIVE caixa agendamento;','UPDATE caixa SET permissao = 1;'], c:0, e:'GRANT permissões ON tabela TO usuário.'},
+  {q:'O caixa rodou UPDATE servico SET preco = 1; e recebeu "permission denied". Isso mostra...', o:['A permissão funcionando: ele não tem UPDATE em servico','Um erro de digitação','O banco fora do ar','Falta de memória'], c:0, e:'Exatamente o planejado.'},
+  {q:'Princípio do menor privilégio:', o:['Cada usuário recebe só as permissões de que precisa','Dar tudo para todos, para não travar','Ter um usuário só no banco','Usar sempre o superusuário'], c:0, e:'Menos acesso, menos estrago.'}],
+ e_sigilo:[
+  {q:'GRANT e REVOKE pertencem a...', o:['DCL (controle de dados)','DDL','DML','HTML'], c:0, e:'Data Control Language.'},
+  {q:'O app em Python deve conectar no banco como...', o:['Um usuário próprio, só com as permissões necessárias','O superusuário postgres','O usuário do professor','Qualquer um, tanto faz'], c:0, e:'Se o app for invadido, o estrago é limitado.'},
+  {q:'Senha do banco escrita no código que vai para um GitHub público é...', o:['Um risco: qualquer pessoa pode ver e acessar o banco','Uma boa prática','Obrigatório','Indiferente'], c:0, e:'Use variáveis de ambiente ou arquivo fora do repositório.'}],
+ e_backup:[
+  {q:'Ferramenta que gera o backup de um banco PostgreSQL:', o:['pg_dump','pg_delete','DROP DATABASE','SELECT *'], c:0, e:'E pg_restore para o formato custom.'},
+  {q:'Regra 3-2-1:', o:['3 cópias, 2 mídias diferentes, 1 fora do local','3 bancos, 2 servidores, 1 usuário','3 tabelas, 2 chaves, 1 view','Backup 3 vezes por dia'], c:0, e:'Se o prédio pegar fogo, a cópia de fora salva.'},
+  {q:'Por que testar a restauração?', o:['Para ter certeza de que o backup funciona quando precisar','Para gastar espaço','Porque o pg_dump apaga os dados','Não precisa testar'], c:0, e:'Backup sem teste é só esperança.'},
+  {q:'Antes de um ALTER TABLE grande no banco da barbearia, o primeiro passo é...', o:['Fazer e conferir um backup','Apagar a tabela','Avisar os clientes por SMS','Desligar o UNIQUE'], c:0, e:'Atualização segura começa com cópia.'}]
+});
+
+const MISSOES = {
+ barbearia:{regras:[
+  ['RN01','Todo cliente tem nome, telefone e data de nascimento. Não podem existir dois clientes com o mesmo telefone.'],
+  ['RN02','A barbearia tem vários barbeiros. De cada um guardamos nome e especialidade.'],
+  ['RN03','Cada serviço tem nome, preço e duração em minutos. Não existem dois serviços com o mesmo nome.'],
+  ['RN04','Um agendamento é de um cliente, com um barbeiro, em uma data e um horário.'],
+  ['RN05','Um barbeiro não pode ter dois agendamentos no mesmo dia e horário.'],
+  ['RN06','Um cliente pode ter vários agendamentos. Um barbeiro também atende vários agendamentos.']],
+  lista:[
+  {t:'Missão 1 • Caçador de Entidades',xp:10,txt:'Quais "coisas" da barbearia têm dados próprios e viram TABELAS? Marque todas e confira.',tipo:'chips',
+   ops:['Cliente','Telefone','Barbeiro','Horário','Serviço','Preço','Agendamento','Especialidade'],certo:['Cliente','Barbeiro','Serviço','Agendamento'],
+   e:'Telefone, horário, preço e especialidade são ATRIBUTOS de alguma entidade.'},
+  {t:'Missão 2 • Guardião da Chave',xp:20,txt:'Escolha a chave primária de cada tabela e os campos que não podem repetir (RN01 e RN03).',tipo:'sel',
+   itens:[['PK de cliente',['nome','telefone','id'],'id'],['PK de barbeiro',['especialidade','id','nome'],'id'],['PK de serviço',['id','preco','nome'],'id'],['PK de agendamento',['data','hora','id'],'id'],['UNIQUE em cliente (RN01)',['nome','telefone','data_nascimento'],'telefone'],['UNIQUE em serviço (RN03)',['preco','duracao_min','nome'],'nome']],
+   e:'O id nunca repete e nunca muda. Telefone e nome do serviço são únicos pelas regras.'},
+  {t:'Missão 3 • Ligando os Pontos',xp:30,txt:'Monte o MER: cardinalidade e onde fica cada chave estrangeira.',tipo:'sel',
+   itens:[['Cliente — Agendamento',['1:1','1:N','N:N'],'1:N'],['Barbeiro — Agendamento',['N:N','1:1','1:N'],'1:N'],['cliente_id (FK) fica na tabela',['cliente','agendamento','barbeiro'],'agendamento'],['barbeiro_id (FK) fica na tabela',['barbeiro','serviço','agendamento'],'agendamento']],
+   e:'A FK fica sempre do lado N: CLIENTE 1—N AGENDAMENTO N—1 BARBEIRO.'},
+  {t:'Missão 4 • Dicionário de Dados',xp:30,txt:'Complete o dicionário: tipo de cada campo e como o banco garante a RN05.',tipo:'sel',
+   itens:[['servico.preco',['VARCHAR','NUMERIC(6,2)','DATE'],'NUMERIC(6,2)'],['agendamento.data',['DATE','TIME','INTEGER'],'DATE'],['agendamento.hora',['VARCHAR','DATE','TIME'],'TIME'],['servico.duracao_min',['INTEGER','BOOLEAN','DATE'],'INTEGER'],['Como garantir a RN05?',['Apagar agendamentos antigos','UNIQUE (barbeiro_id, data, hora)','Chave primária no nome do barbeiro'],'UNIQUE (barbeiro_id, data, hora)']],
+   e:'UNIQUE na combinação barbeiro + data + hora impede o horário duplicado.'}]},
+ clinica:{regras:[
+  ['RN01','Todo tutor tem nome, telefone e e-mail.'],
+  ['RN02','Um tutor pode ter vários pets; cada pet tem um único tutor.'],
+  ['RN03','Cada pet tem nome, espécie e data de nascimento.'],
+  ['RN04','Uma consulta é de um pet, com um veterinário, em uma data.'],
+  ['RN05','Numa consulta podem ser aplicadas várias vacinas, e cada vacina aparece em várias consultas.']],
+  lista:[
+  {t:'Missão 1 • Entidades da Clínica',xp:10,txt:'Quais são as entidades da Clínica Pet Patinhas?',tipo:'chips',
+   ops:['Tutor','Pet','E-mail','Veterinário','Data','Consulta','Vacina','Espécie'],certo:['Tutor','Pet','Veterinário','Consulta','Vacina'],
+   e:'E-mail e data são atributos. Espécie, nesta versão, é atributo do pet.'},
+  {t:'Missão 2 • Cardinalidades',xp:20,txt:'Leia as regras e escolha a cardinalidade de cada relacionamento.',tipo:'sel',
+   itens:[['Tutor — Pet',['1:1','1:N','N:N'],'1:N'],['Pet — Consulta',['1:N','N:N','1:1'],'1:N'],['Veterinário — Consulta',['1:1','N:N','1:N'],'1:N'],['Consulta — Vacina',['1:N','N:N','1:1'],'N:N']],
+   e:'O único N:N é consulta–vacina (RN05).'},
+  {t:'Missão 3 • Do MER às Tabelas',xp:30,txt:'Aplique as regras de conversão para o modelo relacional.',tipo:'sel',
+   itens:[['tutor_id (FK) fica em',['tutor','pet','consulta'],'pet'],['pet_id (FK) fica em',['pet','vacina','consulta'],'consulta'],['O N:N consulta–vacina vira',['um campo vacinas em consulta','a tabela consulta_vacina','duas PKs em vacina'],'a tabela consulta_vacina'],['PK de consulta_vacina',['(consulta_id, vacina_id)','vacina_id','nome_vacina'],'(consulta_id, vacina_id)']],
+   e:'1:N → FK no lado N. N:N → tabela associativa com as duas FKs.'},
+  {t:'Missão 4 • Modelo Relacional Final',xp:30,txt:'Marque TODAS as tabelas do modelo relacional final, e nenhuma a mais.',tipo:'chips',
+   ops:['tutor','pet','veterinario','consulta','vacina','consulta_vacina','tutor_pet','especie_email'],certo:['tutor','pet','veterinario','consulta','vacina','consulta_vacina'],
+   e:'tutor_pet seria preciso só se um pet tivesse vários tutores (não é a regra).'}]}
+};
+
+const CHEFES = {
+ dragao:{nome:'Dragão N:N',cor:'#d62828',olho:'#ffd166',selo:'dragao',regras:[['RN07','Em um mesmo agendamento, o cliente pode fazer mais de um serviço (ex.: corte + barba).'],['RN08','Os preços vão subir em dezembro, mas o valor cobrado nos atendimentos antigos NÃO pode mudar.']],
+  fim:'Modelo final: CLIENTE 1—N AGENDAMENTO N—1 BARBEIRO e AGENDAMENTO 1—N AGENDAMENTO_SERVICO N—1 SERVIÇO.',
+  etapas:[
+  {q:'No modelo atual o agendamento tem UM servico_id. A Ana quer corte E barba no mesmo horário. O que acontece?',o:['O modelo não consegue guardar os dois serviços no mesmo agendamento','Funciona: é só escrever "corte, barba" no campo','Funciona: criamos duas clientes Ana','Funciona: apagamos a barba'],c:0,e:'Agendamento e serviço viraram N:N.'},
+  {tipo:'chips',q:'Monte a nova tabela agendamento_servico. Quais campos ela precisa?',ops:['agendamento_id (FK)','servico_id (FK)','preco_cobrado','nome_cliente','telefone_cliente','nome_barbeiro'],certo:['agendamento_id (FK)','servico_id (FK)','preco_cobrado'],e:'As duas FKs ligam o N:N. Nome e telefone já estão em cliente.'},
+  {q:'Qual é a chave primária de agendamento_servico?',o:['A dupla (agendamento_id, servico_id)','preco_cobrado','nome_cliente','Não precisa de chave'],c:0,e:'Impede lançar o mesmo serviço duas vezes no mesmo agendamento.'},
+  {q:'Por que guardar preco_cobrado em vez de olhar sempre o servico.preco?',o:['O preço do serviço vai mudar e o histórico precisa do valor do dia (RN08)','O SGBD não deixa ler outra tabela','Para ocupar menos espaço','Preço é dado sigiloso'],c:0,e:'servico.preco é o de hoje; preco_cobrado é o que o cliente pagou.'}]},
+ hidra:{nome:'Hidra da Redundância',cor:'#2d6a4f',olho:'#ffd166',selo:'hidra',regras:[['Planilha','tutor | telefone | pet | vacinas | veterinario | data'],['Linha','Marta | 99911-2233 | Thor | "V10, Raiva" | Dra. Lu | 02/12']],
+  fim:'A Hidra virou seis tabelas normalizadas: tutor, pet, veterinario, consulta, vacina e consulta_vacina.',
+  etapas:[
+  {q:'Primeira cabeça: qual campo da planilha quebra a 1FN?',o:['vacinas ("V10, Raiva")','tutor','data','veterinario'],c:0,e:'Duas vacinas no mesmo campo.'},
+  {q:'Segunda cabeça: o telefone da Marta se repete em todas as consultas do Thor. Onde ele deve morar?',o:['Só na tabela tutor','Na tabela consulta','Na tabela vacina','Em todas, por segurança'],c:0,e:'Cada informação em um lugar só.'},
+  {tipo:'chips',q:'Terceira cabeça: quais tabelas saem da planilha normalizada?',ops:['tutor','pet','veterinario','consulta','vacina','consulta_vacina','planilha_geral','telefone'],certo:['tutor','pet','veterinario','consulta','vacina','consulta_vacina'],e:'Telefone é atributo; planilha_geral é o problema, não a solução.'},
+  {q:'Golpe final: em que forma normal está "consulta(id, pet_id, veterinario_id, data)"?',o:['3FN: cada campo depende só da chave','Nenhuma: tem FK','1FN apenas','Não dá para saber'],c:0,e:'Valores atômicos, chave simples e nenhuma dependência transitiva.'}]},
+ golem:{nome:'Golem do DELETE sem WHERE',cor:'#6c757d',olho:'#e5383b',selo:'golem',regras:[['Alerta','Alguém rodou DELETE FROM cliente; no servidor da barbearia.']],
+  fim:'O Golem desmoronou. Lição: WHERE sempre, SELECT antes, e as chaves estrangeiras protegendo os dados.',
+  etapas:[
+  {q:'O DELETE FROM cliente; deu erro de chave estrangeira. Por quê?',o:['Existem agendamentos apontando para esses clientes','O PostgreSQL estava desligado','Faltou o ponto e vírgula','DELETE não existe'],c:0,e:'A FK protegeu os clientes que têm agendamentos.'},
+  {q:'Qual comando apaga só os agendamentos cancelados?',o:["DELETE FROM agendamento WHERE status = 'cancelado';","DELETE FROM agendamento;","DROP TABLE agendamento;","DELETE 'cancelado';"],c:0,e:'WHERE limita as linhas.'},
+  {q:'Aumento de 10% só no Corte:',o:["UPDATE servico SET preco = preco * 1.10 WHERE nome = 'Corte';","UPDATE servico SET preco = preco * 1.10;","UPDATE servico SET preco = 10%;","SELECT preco * 1.10 FROM servico;"],c:0,e:'Sem WHERE, todos os serviços subiriam.'},
+  {q:'Boa prática antes de qualquer UPDATE ou DELETE:',o:['Rodar um SELECT com o mesmo WHERE para conferir as linhas','Desligar o servidor','Apagar o backup','Rodar sem WHERE para testar'],c:0,e:'Confira antes, altere depois.'}]},
+ apagao:{nome:'Dragão do Apagão',cor:'#3c096c',olho:'#ff9e00',selo:'apagao',regras:[['Alerta','Sexta à noite: o HD do servidor da barbearia queimou.']],
+  fim:'O reino voltou a funcionar em uma hora, porque havia backup fora do servidor, testado. Você completou a Cidadela da Persistência!',
+  etapas:[
+  {q:'Qual é a primeira providência?',o:['Pegar o backup mais recente, de fora do servidor, e restaurar num servidor novo','Rodar DELETE no banco','Esperar o HD voltar sozinho','Criar as tabelas de novo e digitar tudo'],c:0,e:'Por isso a cópia fica fora do local.'},
+  {tipo:'chips',q:'O que um backup feito com pg_dump traz?',ops:['estrutura das tabelas (DDL)','dados (registros)','restrições e chaves','o programa Python','o HD queimado'],certo:['estrutura das tabelas (DDL)','dados (registros)','restrições e chaves'],e:'O programa fica no repositório; o banco fica no backup.'},
+  {q:'Depois de restaurar, como conferir?',o:['Contar os registros e rodar as consultas principais (ex.: faturamento)','Confiar que deu certo','Apagar o arquivo de backup','Reinstalar o Windows'],c:0,e:'Avaliar a persistência é conferir os dados.'},
+  {q:'Para nunca perder mais que um dia de agendamentos, a rotina deve ser...',o:['Backup automático diário, com cópia fora do local e teste periódico','Backup uma vez por ano','Só quando lembrar','Nunca: o SGBD não falha'],c:0,e:'Rotina, cópia externa e teste.'}]}
+};
+
+const NIVEIS_XP = [[0,'Estagiário(a) de Dados'],[150,'Júnior'],[400,'Pleno'],[750,'Sênior'],[1100,'Arquiteto(a) de Dados']];
+const SELOS = {
+ sigilo:['Sigilo Total','Venceu o Templo do Sigilo'],
+ chave:['Guardião(ã) da Chave','Caverna das Chaves sem nenhum erro'],
+ mer:['Mestre do MER','Ponte do MER sem nenhum erro'],
+ dragao:['Matador(a) do Dragão N:N','Derrotou o Chefão do Fácil'],
+ hidra:['Caçador(a) da Hidra','Derrotou o Chefão do Médio'],
+ golem:['Quebra-Golem','Derrotou o Chefão do Difícil'],
+ apagao:['Guardião(ã) do Backup','Derrotou o Chefão do Expert'],
+ facil:['Fácil concluído','Terminou o Reino que Esquecia'],
+ medio:['Médio concluído','Terminou as Terras da Modelagem'],
+ dificil:['Difícil concluído','Terminou a Fortaleza do SQL'],
+ expert:['Expert concluído','Terminou a Cidadela da Persistência']
+};
+const LEVELS = [L_FACIL, L_MEDIO, L_DIFICIL, L_EXPERT];
+// ===================== SOM (8 bits, gerado no navegador) =====================
+const SOM={gesto:false,querida:'mapa',ctx:null,master:null,musG:null,fx:true,mus:true,faixa:null,passo:0,prox:0,timer:null};
+try{const p=JSON.parse(localStorage.getItem('reinoDosDados_som')||'{}');if(p.fx===false)SOM.fx=false;if(p.mus===false)SOM.mus=false}catch(e){}
+function somSalvar(){try{localStorage.setItem('reinoDosDados_som',JSON.stringify({fx:SOM.fx,mus:SOM.mus}))}catch(e){}}
+function audio(){if(!SOM.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;try{SOM.ctx=new C()}catch(e){return null}
+  SOM.master=SOM.ctx.createGain();SOM.master.gain.value=.6;SOM.master.connect(SOM.ctx.destination);SOM.musG=SOM.ctx.createGain();SOM.musG.gain.value=.35;SOM.musG.connect(SOM.master)}
+ if(SOM.ctx.state==='suspended')SOM.ctx.resume();return SOM.ctx}
+const hz=n=>440*Math.pow(2,(n-69)/12);
+function tom(f,dur,tipo,vol,quando,dest){const c=audio();if(!c)return;const t=Math.max(c.currentTime,quando||c.currentTime);const o=c.createOscillator(),g=c.createGain();
+ o.type=tipo||'square';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(vol||.12,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+ o.connect(g);g.connect(dest||SOM.master);o.start(t);o.stop(t+dur+.03)}
+function seq(notas,passo,tipo,vol,dur){const c=audio();if(!c)return;const t0=c.currentTime+.01;notas.forEach((n,i)=>{if(n)tom(hz(n),dur||passo*1.6,tipo,vol,t0+i*passo)})}
+const SFX={
+ clique:()=>tom(880,.04,'square',.04),
+ passo:()=>tom(140+Math.random()*40,.05,'triangle',.05),
+ pagina:()=>tom(1175,.05,'triangle',.05),
+ acerto:()=>seq([72,76,79,84],.06,'square',.09),
+ erro:()=>{seq([55,50],.12,'sawtooth',.08,.22)},
+ vitoria:()=>seq([72,0,72,76,79,0,76,79,84],.09,'square',.1,.16),
+ fanfarra:()=>{seq([67,72,76,79,84,79,84,88],.11,'square',.1,.2);seq([48,0,55,0,60,0,55,60],.11,'triangle',.12,.25)},
+ nivel:()=>seq([76,79,84,88,91],.07,'triangle',.12),
+ selo:()=>seq([88,91,96],.08,'triangle',.1),
+ porta:()=>seq([60,64,67,72],.08,'triangle',.12),
+ chefe:()=>seq([45,44,43,42],.18,'sawtooth',.1,.3),
+ desmaio:()=>seq([67,64,60,55,48],.14,'triangle',.12)};
+function sfx(n){if(!SOM.gesto||!SOM.fx||!SFX[n])return;try{SFX[n]()}catch(e){}}
+// músicas: [melodia (16 avos), baixo por compasso, duração do passo]
+const FAIXAS={
+ mapa:[[72,0,76,0,79,0,76,0,74,0,77,0,81,0,77,0,76,0,79,0,84,0,79,0,77,76,74,0,72,0,0,0],[48,53,55,48],.16],
+ batalha:[[69,0,72,69,76,0,74,72,71,0,74,71,79,0,77,76,69,0,72,69,76,0,81,79,77,76,74,72,71,0,69,0],[45,43,41,40],.12],
+ chefe:[[57,57,60,57,63,0,62,60,57,57,60,57,64,0,63,62,57,57,60,57,63,0,67,66,65,63,62,60,59,0,57,0],[33,33,31,32],.11]};
+function agendar(){const c=SOM.ctx;if(!c||!SOM.faixa)return;const[mel,bx,dt]=FAIXAS[SOM.faixa];
+ while(SOM.prox<c.currentTime+.15){const i=SOM.passo%mel.length;if(mel[i])tom(hz(mel[i]),dt*1.5,'square',.05,SOM.prox,SOM.musG);
+  if(i%8===0)tom(hz(bx[(i/8)|0]),dt*3,'triangle',.12,SOM.prox,SOM.musG);if(i%8===4)tom(hz(bx[(i/8)|0]+7),dt*2,'triangle',.08,SOM.prox,SOM.musG);
+  if(SOM.faixa!=='mapa'&&i%4===2)tom(2000,.02,'square',.015,SOM.prox,SOM.musG);
+  SOM.passo++;SOM.prox+=dt}}
+function musica(f){if(f)SOM.querida=f;const alvo=SOM.mus?SOM.querida:null;if(alvo===SOM.faixa)return;
+ if(!SOM.gesto)return;SOM.faixa=alvo;clearInterval(SOM.timer);SOM.timer=null;if(!alvo)return;const c=audio();if(!c)return;SOM.passo=0;SOM.prox=c.currentTime+.05;SOM.timer=setInterval(agendar,40);agendar()}
+function botoesSom(){const a=$('btnFx'),b=$('btnMus');if(!a)return;a.textContent='Efeitos: '+(SOM.fx?'sim':'não');a.setAttribute('aria-pressed',SOM.fx);b.textContent='Música: '+(SOM.mus?'sim':'não');b.setAttribute('aria-pressed',SOM.mus)}
+document.addEventListener('pointerdown',()=>{SOM.gesto=true;audio();if(SOM.mus&&!SOM.faixa)musica()},true);
+document.addEventListener('keydown',()=>{if(!SOM.gesto){SOM.gesto=true;audio();if(SOM.mus)musica()}},true);
+document.addEventListener('click',ev=>{const b=ev.target.closest&&ev.target.closest('button');if(b&&b.id!=='btnFx')sfx(document.querySelector('#cena .historia')&&!$('veu').hidden?'pagina':'clique')},true);
+// ===================== MOTOR =====================
+const KEY='reinoDosDados_v2';
+const OFF=[[0,0],[320,0],[320,184],[0,184]];
+const W=640,H=368,VW=320,VH=184;
+let S=null, LV=null, NOD={}, EDG=[], visao=false;
+const $=id=>document.getElementById(id);
+const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else e.setAttribute(k,v)}for(const k of kids)if(k!=null&&k!==false)e.append(k.nodeType?k:document.createTextNode(k));return e};
+function salvar(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function carregar(){try{const t=localStorage.getItem(KEY);return t?JSON.parse(t):null}catch(e){return null}}
+const PR=()=>S.P[LV.id]||(S.P[LV.id]={feito:{},erros:{},abertos:{},missao:{},hist:{},pos:null});
+function nivel(xp){let n=NIVEIS_XP[0];for(const x of NIVEIS_XP)if(xp>=x[0])n=x;return n}
+function proxNivel(xp){for(const x of NIVEIS_XP)if(xp<x[0])return x[0];return null}
+function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+function ganharXP(n,m){const a=nivel(S.xp)[1];S.xp+=n;const d=nivel(S.xp)[1];toast(`+${n} XP ${m||''}`);if(a!==d)setTimeout(()=>{sfx('nivel');toast('NOVO NÍVEL: '+d.toUpperCase()+'!')},1400);salvar();hud()}
+function darSelo(k){if(k&&SELOS[k]&&!S.selos.includes(k)){S.selos.push(k);salvar();hud();setTimeout(()=>{sfx('selo');toast('SELO: '+SELOS[k][0])},2800)}}
+function errar(id){sfx('erro');const p=PR();p.erros[id]=(p.erros[id]||0)+1;S.vida=Math.max(0,S.vida-1);salvar();hud()}
+
+// ---------- mundo do nível ----------
+function montarNivel(lv){LV=lv;NOD={};EDG=[];
+ lv.fases.forEach((f,k)=>{const[ox,oy]=OFF[k];for(const[id,n]of Object.entries(f.lugares))NOD[id]={...n,id,x:n.x+ox,y:n.y+oy,fase:k,pre:f.pre[id]||[]};
+  f.edges.forEach(e=>EDG.push(e));
+  if(k<lv.fases.length-1){const prox=Object.keys(lv.fases[k+1].lugares)[0];EDG.push([f.saida,prox])}});
+ terreno(lv.bioma);criarLabels()}
+const primeiro=k=>Object.keys(LV.fases[k].lugares)[0];
+function faseLiberada(k){return k===0||faseCompleta(k-1)}
+function faseCompleta(k){return Object.entries(LV.fases[k].lugares).every(([id,n])=>n.extra||PR().feito[id])}
+function nivelCompleto(lv){const p=S.P[lv.id];if(!p)return false;return lv.fases.every(f=>Object.entries(f.lugares).every(([id,n])=>n.extra||p.feito[id]))}
+function disponivel(id){const n=NOD[id];return faseLiberada(n.fase)&&n.pre.every(p=>PR().feito[p])}
+function estado(id){return PR().feito[id]?'feito':disponivel(id)?'disp':'trava'}
+
+// ---------- pixel art ----------
+const cv=$('cv'),cx=cv.getContext('2d');cx.imageSmoothingEnabled=false;
+const R=(x,y,w,h,c,g=cx)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h)};
+let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
+const HERO=['..kkkk..','.kHHHHk.','kHHHHHHk','kSSSSSSk','kSkSSkSk','.kSSSSk.','kCCCCCCk','SkCCCCkS','.kPPPPk.','.kPkkPk.','.kk..kk.'];
+const AVS=[{H:'#5a3825',C:'#2a9d8f',P:'#264653',S:'#f1c27d'},{H:'#f4d35e',C:'#e63946',P:'#1d3557',S:'#e0ac69'},{H:'#1b1b1b',C:'#9b5de5',P:'#3d348b',S:'#8d5524'},{H:'#c1440e',C:'#f77f00',P:'#3c2a21',S:'#ffdbac'}];
+function spr(g,s,pal,x,y,k=1){s.forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch==='.')return;const c=ch==='k'?'#14112a':pal[ch];if(c)R(x+i*k,y+j*k,k,k,c,g)}))}
+const BIOMAS={
+ campo:{g:['#3d8547','#4f9a55','#2f6e3b'],fl:['#ffd166','#ef476f','#ffffff'],agua:'#2b5d9c',brilho:'#5f9ad8',marg:'#c9b57a',cam:'#d2ad6d',camB:'#8f6f3e',arv:['#25683a','#3a9a55','#1d5230'],tronco:'#5b3a1e'},
+ savana:{g:['#b59f45','#c7b45a','#9c8a35'],fl:['#e76f51','#f4a261','#ffffff'],agua:'#2a7f9e',brilho:'#5fb7d4',marg:'#e9d8a6',cam:'#e3c08a',camB:'#9a6b3a',arv:['#bc4b1b','#e07a2f','#8f3a15'],tronco:'#4a2c17'},
+ neve:{g:['#dfe8f0','#eef4f8','#c9d6e3'],fl:['#a8dadc','#ffffff','#bde0fe'],agua:'#3a6ea5',brilho:'#a2d2ff',marg:'#b8c4d0',cam:'#a39074',camB:'#6b5a45',arv:['#1f4e4a','#2f6f68','#163b38'],tronco:'#3e2a1c'},
+ cristal:{g:['#2a2440','#332b52','#221d36'],fl:['#5ec8ff','#c77dff','#ffd166'],agua:'#3a0ca3',brilho:'#7b2ff7',marg:'#4a3f6b',cam:'#5b4d8a',camB:'#2c2350',arv:['#4cc9f0','#a2e7ff','#3a86ff'],tronco:'#1b1530'}};
+let B=BIOMAS.campo;
+const base=document.createElement('canvas');base.width=W;base.height=H;const bg=base.getContext('2d');
+const rioX=y=>318+Math.sin(y/17)*6;
+function distSeg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-ax-t*dx,py-ay-t*dy)}
+const pertoCam=(x,y,m)=>EDG.some(([a,b])=>distSeg(x,y,NOD[a].x,NOD[a].y,NOD[b].x,NOD[b].y)<m);
+function arvore(x,y,esc){const[c,h,d]=B.arv;R(x-1,y+2,2,3,B.tronco,bg);
+ if(LV&&LV.bioma==='cristal'){R(x-1,y-6,3,9,esc?d:c,bg);R(x-3,y-2,2,5,h,bg);R(x+2,y-3,2,6,c,bg);return}
+ if(LV&&LV.bioma==='neve'){R(x-1,y-7,3,2,c,bg);R(x-2,y-5,5,2,c,bg);R(x-3,y-3,7,2,esc?d:c,bg);R(x-4,y-1,9,3,esc?d:c,bg);R(x-1,y-7,1,1,'#fff',bg);R(x-3,y-3,2,1,'#fff',bg);return}
+ R(x-3,y-3,7,5,esc?d:c,bg);R(x-2,y-5,5,2,esc?d:c,bg);R(x-2,y-3,2,2,h,bg)}
+function terreno(bioma){B=BIOMAS[bioma];seed=11;
+ for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){const r=rnd();R(x,y,2,2,r<.08?B.g[1]:r<.16?B.g[2]:B.g[0],bg)}
+ for(let i=0;i<220;i++)R(rnd()*W|0,rnd()*H|0,1,1,B.fl[i%3],bg);
+ for(let y=0;y<H;y++){const c=rioX(y);R(c-7,y,15,1,B.agua,bg);R(c-8,y,1,1,B.marg,bg);R(c+8,y,1,1,B.marg,bg);if(y%7===0)R(c-3+(y%3),y,4,1,B.brilho,bg)}
+ for(const pass of[0,1])for(const[a,b]of EDG){const A=NOD[a],Bn=NOD[b],n=Math.ceil(Math.hypot(Bn.x-A.x,Bn.y-A.y));
+  for(let i=0;i<=n;i++){const x=A.x+(Bn.x-A.x)*i/n,y=A.y+(Bn.y-A.y)*i/n;const naAgua=Math.abs(x-rioX(y))<9;
+   if(pass===0)R(x-3,y-3,7,7,naAgua?'#5b3a1e':B.camB,bg);else R(x-2,y-2,5,5,naAgua?((i>>1)%2?'#a0703c':'#8a5e30'):B.cam,bg)}}
+ for(let i=0;i<420;i++){const x=6+rnd()*(W-12),y=8+rnd()*(H-16);if(Math.abs(x-rioX(y))<14||pertoCam(x,y,10)||Object.values(NOD).some(n=>Math.hypot(n.x-x,n.y-y)<20))continue;arvore(x,y,rnd()<.3)}
+ // divisas das regiões
+ for(let x=0;x<W;x+=6)if(Math.abs(x-rioX(184))>10&&!pertoCam(x,184,8))R(x,184,3,1,'rgba(0,0,0,.18)',bg);
+}
+function casa(x,y,par,tel){R(x-6,y-5,12,8,par);R(x-7,y-9,14,4,tel);R(x-5,y-11,10,2,tel);R(x-1,y-1,3,4,'#5b3a1e');R(x-5,y-3,3,2,'#a8dadc');R(x+3,y-3,3,2,'#a8dadc')}
+function icone(n,x,y,t){switch(n.ic){
+ case'vila':casa(x-9,y,'#e8d5b0','#b5442e');casa(x+8,y+3,'#d9c29a','#7a4f9e');break;
+ case'mercado':R(x-8,y-2,16,6,'#8d6e63');for(let i=0;i<8;i++)R(x-9+i*2,y-7,2,5,i%2?'#e63946':'#fff');R(x-6,y-1,3,2,'#ffd166');R(x+2,y-1,3,2,'#90be6d');break;
+ case'planilha':R(x-10,y-12,20,15,'#14112a');R(x-9,y-11,18,13,'#e9f5db');R(x-9,y-11,18,3,'#38b000');for(let i=-3;i<9;i+=6)R(x+i,y-8,1,10,'#95d5b2');for(let j=-5;j<2;j+=3)R(x-9,y+j,18,1,'#95d5b2');R(x-2,y-4,5,2,(t%50<25)?'#ff006e':'#ffadad');break;
+ case'torre':R(x-5,y-16,10,20,'#8a8fa8');R(x-5,y-16,2,20,'#a9aec4');R(x-7,y-20,14,4,'#6b3fa0');R(x-4,y-24,8,4,'#6b3fa0');R(x-1,y-27,3,3,'#6b3fa0');R(x-1,y-10,3,4,(t%60<30)?'#ffd166':'#ffb703');R(x-2,y,4,4,'#3d2b56');break;
+ case'floresta':for(const[a,b]of[[-7,-2],[6,-1],[0,-6],[-3,4],[5,5]]){R(x+a-3,y+b-3,7,5,'#1d5230');R(x+a-2,y+b-5,5,2,'#1d5230')}R(x-1,y,2,2,(t%50<25)?'#e9ff70':'#b8f25b');break;
+ case'templo':R(x-8,y-2,16,6,'#e9e3d5');for(let i=-7;i<8;i+=4)R(x+i,y-2,2,6,'#c9c1ad');R(x-9,y-6,18,4,'#e0b03a');R(x-6,y-9,12,3,'#e0b03a');R(x-1,y-1,3,5,'#6b5b3a');break;
+ case'biblioteca':R(x-9,y-6,18,10,'#8d6e63');R(x-10,y-9,20,3,'#5d4037');for(let i=0;i<5;i++)R(x-7+i*3,y-4,2,5,['#e63946','#457b9d','#f4a261','#2a9d8f','#ffd166'][i]);break;
+ case'caverna':R(x-10,y-4,20,8,'#6d6a75');R(x-8,y-8,16,4,'#6d6a75');R(x-5,y-10,10,2,'#85818f');R(x-3,y-3,6,7,'#14112a');if(t%80<40)R(x+5,y-6,2,2,'#ffd166');break;
+ case'ponte':R(x-11,y-3,22,7,B.agua);for(let i=-10;i<=10;i+=2)R(x+i,y-4,2,9,i%4?'#a0703c':'#8a5e30');R(x-11,y-5,23,1,'#5b3a1e');R(x-11,y+5,23,1,'#5b3a1e');break;
+ case'portao':R(x-9,y-10,4,14,'#7b7b86');R(x+5,y-10,4,14,'#7b7b86');R(x-9,y-13,18,4,'#5c5c66');if(!PR().feito[n.id])for(let i=-4;i<5;i+=3)R(x+i,y-9,1,13,'#2b2b33');break;
+ case'barbearia':{casa(x,y,'#f1e3c6','#264653');const f=(t>>3)%3;for(let j=0;j<8;j++)R(x+8,y-6+j,2,1,['#d62828','#ffffff','#1d4e89'][(j+f)%3]);break}
+ case'castelo':R(x-12,y-8,24,12,'#3d3550');R(x-12,y-12,5,4,'#3d3550');R(x+7,y-12,5,4,'#3d3550');R(x-3,y-14,6,6,'#3d3550');R(x-2,y-1,4,5,'#14112a');R(x-11,y-17,1,5,'#ddd');R(x-10,y-17,4,2,'#d62828');R(x+8,y-17,1,5,'#ddd');R(x+9,y-17,4,2,'#d62828');break;
+ case'campo':for(let i=-9;i<10;i+=3)R(x+i,y-4,1,7,'#e9c46a');R(x-1,y-12,3,10,'#6b4226');R(x-4,y-9,9,1,'#6b4226');R(x-2,y-14,5,3,'#f4a261');break;
+ case'poco':R(x-6,y-3,12,7,'#7b7b86');R(x-4,y-2,8,3,'#1d3557');R(x-7,y-12,1,9,'#5b3a1e');R(x+6,y-12,1,9,'#5b3a1e');R(x-8,y-14,17,3,'#9c2a2a');break;
+ case'moinho':R(x-4,y-12,8,16,'#e9d8a6');R(x-5,y-15,10,3,'#9c2a2a');{const a=(t>>3)%2;if(a){R(x-10,y-12,20,2,'#6b4226');R(x-1,y-21,2,20,'#6b4226')}else{for(let i=-8;i<9;i++){R(x+i,y-11+i,1,1,'#6b4226');R(x+i,y-11-i,1,1,'#6b4226')}}}break;
+ case'montanha':for(let i=0;i<12;i++)R(x-12+i,y+4-i,24-2*i,1,'#6c757d');R(x-3,y-8,6,3,'#fff');break;
+ case'cartorio':casa(x,y,'#e5e5e5','#5a189a');R(x-2,y-9,4,3,'#ffd166');break;
+ case'atelie':casa(x,y,'#ffe8d6','#ff7b00');R(x+8,y-6,1,9,'#6b4226');R(x+7,y-7,5,4,'#fff');R(x+8,y-6,2,1,'#e63946');break;
+ case'covil':R(x-12,y-4,24,8,'#3a3a46');R(x-9,y-8,18,4,'#3a3a46');R(x-5,y-3,10,7,'#0a0818');if(t%70<50){R(x-3,y-1,2,1,'#ff0054');R(x+2,y-1,2,1,'#ff0054')}break;
+ case'porto':R(x-12,y+1,24,3,'#8a5e30');for(let i=-11;i<12;i+=5)R(x+i,y+1,1,5,'#5b3a1e');R(x-4,y-5,10,4,'#e63946');R(x,y-13,1,8,'#ddd');R(x+1,y-12,5,5,'#fff');break;
+ case'farol':for(let j=0;j<18;j++)R(x-3,y-14+j,6,1,j%6<3?'#e63946':'#fff');R(x-4,y-18,8,4,'#264653');if(t%60<30){R(x+4,y-17,8,2,'rgba(255,209,102,.7)')}break;
+ case'forja':casa(x,y,'#a0a0a8','#4a4e69');R(x+3,y-15,3,6,'#4a4e69');R(x+3,y-17-((t>>3)%3),3,2,'#adb5bd');R(x-1,y-1,3,4,(t%30<15)?'#f48c06':'#e85d04');break;
+ case'muralha':R(x-14,y-8,28,12,'#8a8fa8');for(let i=-14;i<14;i+=4)R(x+i,y-11,2,3,'#8a8fa8');for(let j=-6;j<4;j+=3)R(x-14,y+j,28,1,'#6c7086');R(x-3,y-2,6,6,'#3d3550');break;
+ case'lab':casa(x,y,'#e0fbfc','#3d5a80');R(x+8,y-4,3,5,'#90e0ef');R(x+8,y-3,3,2,(t%40<20)?'#80ed99':'#38b000');break;
+ case'cofre':R(x-9,y-8,18,14,'#adb5bd');R(x-7,y-6,14,10,'#6c757d');R(x-2,y-3,4,4,'#ffd166');R(x,y-1,1,1,'#14112a');break;
+ default:casa(x,y,'#e8d5b0','#7a4f9e')}}
+let heroi={x:0,y:0},rota=null,tick=0,cam={x:0,y:0};
+function desenha(){tick++;
+ if(S&&LV){
+  if(rota){const[a,b]=rota.seg;const A=NOD[a],Bn=NOD[b];rota.t+=1.7/Math.max(1,Math.hypot(Bn.x-A.x,Bn.y-A.y));
+   if(rota.t>=1){rota.i++;if(rota.i>=rota.path.length-1){const fim=rota.path[rota.path.length-1];PR().pos=fim;salvar();rota=null;heroi={x:NOD[fim].x,y:NOD[fim].y};abrir(fim)}else{rota.seg=[rota.path[rota.i],rota.path[rota.i+1]];rota.t=0}}
+   if(rota){if(tick%14===0)sfx('passo');const[a2,b2]=rota.seg;const A2=NOD[a2],B2=NOD[b2];heroi={x:A2.x+(B2.x-A2.x)*rota.t,y:A2.y+(B2.y-A2.y)*rota.t}}}
+  const tx=Math.max(0,Math.min(W-VW,heroi.x-VW/2)),ty=Math.max(0,Math.min(H-VH,heroi.y-VH/2));cam.x+= (tx-cam.x)*.12;cam.y+=(ty-cam.y)*.12;
+  if(visao){cv.width!==W&&(cv.width=W,cv.height=H,cx.imageSmoothingEnabled=false);cx.drawImage(base,0,0);desenhaCamada(0,0)}
+  else{cv.width!==VW&&(cv.width=VW,cv.height=VH,cx.imageSmoothingEnabled=false);const ox=Math.round(cam.x),oy=Math.round(cam.y);cx.drawImage(base,ox,oy,VW,VH,0,0,VW,VH);desenhaCamada(ox,oy)}
+  posLabels()}
+ requestAnimationFrame(desenha)}
+function desenhaCamada(ox,oy){cx.save();cx.translate(-ox,-oy);
+ for(const id in NOD){const n=NOD[id];icone(n,n.x,n.y,tick);const st=estado(id);
+  if(st==='feito'){R(n.x+9,n.y-14,1,9,'#ddd');R(n.x+10,n.y-14,5,3,'#7ae582')}
+  else if(st==='disp'){const b=Math.round(Math.sin(tick/8)*2);R(n.x-2,n.y-22+b,5,2,'#ffcf4a');R(n.x-1,n.y-20+b,3,2,'#ffcf4a');R(n.x,n.y-18+b,1,1,'#ffcf4a')}}
+ // névoa nas regiões bloqueadas
+ LV.fases.forEach((f,k)=>{if(faseLiberada(k))return;const[x0,y0]=OFF[k];R(x0,y0,320,184,'rgba(20,17,42,.86)');
+  for(let i=0;i<40;i++){const px=x0+((i*53+tick*0.3)%320),py=y0+((i*37)%184);R(px,py,14,3,'rgba(184,176,214,.10)')}
+  R(x0+150,y0+82,20,16,'#8a84a8');R(x0+154,y0+76,12,6,'#8a84a8');R(x0+157,y0+79,6,3,'rgba(20,17,42,1)');R(x0+158,y0+88,4,5,'#14112a')});
+ const pul=rota?((tick>>2)%2):0;R(heroi.x-4,heroi.y+3,9,2,'rgba(0,0,0,.3)');spr(cx,HERO,AVS[S.av],heroi.x-4,heroi.y-9-pul);cx.restore()}
+let LBL=[];
+function criarLabels(){const m=$('mapa');m.querySelectorAll('.lbl').forEach(e=>e.remove());LBL=[];
+ for(const id in NOD){const e=el('div',{class:'lbl'},NOD[id].nome);m.append(e);LBL.push([id,e])}
+ LV.fases.forEach((f,k)=>{const e=el('div',{class:'lbl regiao'},`Região ${k+1}: ${f.nome}`);m.append(e);LBL.push(['@'+k,e])})}
+function posLabels(){const ox=visao?0:cam.x,oy=visao?0:cam.y,vw=visao?W:VW,vh=visao?H:VH;
+ for(const[id,e]of LBL){let x,y,show;
+  if(id[0]==='@'){const k=+id.slice(1);x=OFF[k][0]+160;y=OFF[k][1]+92;show=visao;e.className='lbl regiao'+(faseLiberada(k)?(faseCompleta(k)?' feito':' disp'):' trava')}
+  else{const n=NOD[id];x=n.x;y=n.y+8;show=!visao&&faseLiberada(n.fase);e.className='lbl '+estado(id)}
+  const px=(x-ox)/vw*100,py=(y-oy)/vh*100;show=show&&px>2&&px<98&&py>0&&py<96;e.hidden=!show;if(show){e.style.left=px+'%';e.style.top=py+'%'}}}
+
+// ---------- HUD, diário, viagem ----------
+function hud(){if(!S)return;$('hNome').textContent=S.nome;$('hVida').textContent='♥'.repeat(S.vida)+'♡'.repeat(5-S.vida);
+ const n=nivel(S.xp);$('hNivel').textContent=n[1];$('hXp').textContent=S.xp;const pn=proxNivel(S.xp);$('hXpBar').style.width=pn?((S.xp-n[0])/(pn-n[0])*100)+'%':'100%';
+ $('hDif').textContent=LV?LV.nome.toUpperCase():'—';
+ $('hSelos').replaceChildren(...S.selos.map(k=>el('span',{class:'selo',title:SELOS[k][1]},SELOS[k][0])));if(LV)diario()}
+function diario(){const L=$('lista');L.replaceChildren();$('dTit').textContent=LV.titulo.toUpperCase();
+ LV.fases.forEach((f,k)=>{const lib=faseLiberada(k);L.append(el('div',{class:'reg'+(lib?'':' trava')},`Região ${k+1} • ${f.nome}`,lib&&PR().hist[k]?el('button',{class:'mini',type:'button',on:{click:()=>historia(k,fechar)}},'história'):null));
+  if(!lib){L.append(el('div',{class:'dica'},'Região coberta pela névoa.'));return}
+  for(const id of Object.keys(f.lugares)){const n=NOD[id],st=estado(id);const b=el('button',{class:'lugar '+st,type:'button',on:{click:()=>viajar(id)}},n.nome+(n.extra?' (opcional)':''),el('small',{},st==='feito'?'concluído':st==='disp'?'disponível':'bloqueado'));if(st==='trava')b.disabled=true;L.append(b)}})}
+function caminho(de,para){const fila=[[de]],vis=new Set([de]);while(fila.length){const p=fila.shift(),u=p[p.length-1];if(u===para)return p;
+ for(const[a,b]of EDG){const v=a===u?b:b===u?a:null;if(v&&!vis.has(v)&&(PR().feito[v]||disponivel(v))){vis.add(v);fila.push([...p,v])}}}return null}
+function viajar(id){if(rota||!$('veu').hidden)return;if(visao)alternarVisao();if(estado(id)==='trava'){toast('Bloqueado: vença os lugares anteriores.');return}
+ const pos=PR().pos||primeiro(0);if(id===pos){abrir(id);return}const p=caminho(pos,id);if(!p){heroi={x:NOD[id].x,y:NOD[id].y};PR().pos=id;abrir(id);return}rota={path:p,i:0,seg:[p[0],p[1]],t:0}}
+cv.addEventListener('click',ev=>{if(!S||!LV)return;if(visao){alternarVisao();return}const r=cv.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*VW+cam.x,y=(ev.clientY-r.top)/r.height*VH+cam.y;
+ let best=null,bd=18;for(const id in NOD){const d=Math.hypot(NOD[id].x-x,NOD[id].y-y);if(d<bd){bd=d;best=id}}if(best)viajar(best)});
+function alternarVisao(){visao=!visao;$('btnVisao').textContent=visao?'Voltar ao herói':'Mapa completo';$('btnVisao').setAttribute('aria-pressed',visao)}
+
+// ---------- cenas ----------
+function cena(...kids){$('cena').replaceChildren(...kids.filter(Boolean));$('veu').hidden=false;$('cena').scrollTop=0;const f=$('cena').querySelector('.acoes button:last-child,input');if(f)f.focus()}
+function fechar(){$('veu').hidden=true;hud();musica('mapa')}
+function retrato(cor){const c=el('canvas',{width:16,height:16});spr(c.getContext('2d'),['....kkkkkk......','...kHHHHHHk.....','..kHHHHHHHHk....','..kFFFFFFFFk....','..kFkFFFkFFk....','..kFFFFFFFFk....','..kFFFkkFFFk....','...kFFFFFFk.....','..kCCCCCCCCk....','.kCCCCCCCCCCk...','.kCCCCCCCCCCk...','.kCCCCCCCCCCk...'],{H:cor,F:'#f1c27d',C:cor},2,2);return c}
+function monstro(cor,olho){const c=el('canvas',{width:24,height:24});spr(c.getContext('2d'),['........kkkkkkkk........','......kkMMMMMMMMkk......','.....kMMMMMMMMMMMMk.....','....kMMMMMMMMMMMMMMk....','...kMMMLLMMMMMMLLMMMk...','...kMMMLOkMMMMLOkMMMk...','..kMMMMLkkMMMMLkkMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','..kMMMkwkwkwkwkwkMMMMk..','..kMMMMkkkkkkkkkkMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','.kMMMMMMMMMMMMMMMMMMMMk.','.kMMMMMMMMMMMMMMMMMMMMk.','kMMkMMMMMMkMMMMMMMMkMMMk','kkk.kkkkkk.kkkkkkk..kkk.'],{M:cor,L:'#ffffff',O:olho,w:'#ffffff'},0,4);return c}
+function tabelaEl(rows){return el('div',{class:'tbw'},el('table',{class:'tb'},...rows.map((r,i)=>el('tr',{},...r.map(c=>el(i?'td':'th',{},c))))))}
+function arte(key){const c=el('canvas',{width:96,height:54,class:'arte'});const g=c.getContext('2d');const r=(x,y,w,h,col)=>R(x,y,w,h,col,g);
+ const ceu=LV&&LV.bioma==='cristal'?'#1b1536':LV&&LV.bioma==='neve'?'#9fc5e8':LV&&LV.bioma==='savana'?'#f6bd60':'#8ecae6';r(0,0,96,54,ceu);r(0,40,96,14,B.g[0]);for(let i=0;i<96;i+=7)r(i,40,3,1,B.g[2]);
+ const lin=(x,y,w,n,col)=>{for(let i=0;i<n;i++)r(x,y+i*3,w,1,col)};
+ const caixa=(x,y,w,h,col,txt)=>{r(x,y,w,h,'#14112a');r(x+1,y+1,w-2,h-2,col)};
+ switch(key){
+  case'caderno':r(30,12,36,26,'#f6ecd0');r(47,12,2,26,'#c9a46a');lin(33,16,12,6,'#7aa6c2');lin(51,16,12,6,'#7aa6c2');r(66,20,3,14,'#e63946');break;
+  case'chuva':r(30,22,36,16,'#c9d6df');lin(33,25,28,4,'#7aa6c2');r(44,26,10,8,'#5c7c99');for(let i=0;i<14;i++)r((i*13+tick)%96,(i*7+tick*2)%40,1,3,'#3a86ff');r(0,0,96,6,'#6c757d');break;
+  case'pc':r(28,10,40,26,'#14112a');r(30,12,36,20,'#023047');lin(33,15,20,5,'#80ed99');r(44,36,8,4,'#495057');r(36,40,24,2,'#495057');break;
+  case'ram':r(10,18,34,12,'#2d6a4f');for(let i=0;i<5;i++)r(13+i*6,21,4,6,'#14112a');for(let i=0;i<8;i++)r(11+i*4,30,2,3,'#ffd166');r(48,22,8,3,'#ffcf4a');r(54,20,2,7,'#ffcf4a');r(60,14,26,22,'#6c757d');r(64,18,18,14,'#adb5bd');r(72,24,3,3,'#14112a');break;
+  case'servidor':for(let j=0;j<3;j++){r(34,8+j*10,28,8,'#343a40');r(37,11+j*10,10,2,'#6c757d');r(55,11+j*10,2,2,(tick+j*10)%40<20?'#80ed99':'#38b000')}r(12,26,14,10,'#023047');r(26,30,8,1,'#ffcf4a');r(62,30,10,1,'#ffcf4a');r(72,26,14,10,'#023047');break;
+  case'mapa':r(18,8,60,32,'#f6ecd0');r(18,8,60,2,'#c9a46a');for(let i=0;i<40;i+=4)r(24+i,20+Math.round(Math.sin(i/6)*6),2,2,'#b5442e');r(70,14,4,4,'#e63946');r(22,30,4,4,'#2a9d8f');break;
+  case'tabela':case'tipos':caixa(14,8,68,30,'#f8f9fa');r(15,9,66,6,'#004f8b');for(let i=1;i<4;i++)r(14+i*17,9,1,28,'#adb5bd');for(let j=1;j<4;j++)r(15,15+j*7,66,1,'#adb5bd');if(key==='tipos'){r(17,17,12,2,'#e63946');r(34,17,12,2,'#2a9d8f');r(51,17,12,2,'#f4a261')}break;
+  case'livro':r(22,12,24,26,'#e63946');r(46,12,24,26,'#457b9d');r(45,12,2,26,'#14112a');lin(25,16,18,6,'#ffe5ec');lin(49,16,18,6,'#e0fbfc');break;
+  case'cadeado':r(38,8,20,4,'#adb5bd');r(38,8,4,16,'#adb5bd');r(54,8,4,16,'#adb5bd');r(32,20,32,20,'#ffd166');r(46,26,4,8,'#14112a');break;
+  case'dupla':for(const x of[24,58]){r(x,12,14,12,'#f1c27d');r(x-1,9,16,5,'#5a3825');r(x+3,16,2,2,'#14112a');r(x+9,16,2,2,'#14112a');r(x-2,24,18,16,'#e63946')}r(44,18,8,8,'#ffd166');r(47,20,2,3,'#14112a');r(47,24,2,1,'#14112a');break;
+  case'chave':r(24,20,14,14,'#ffd166');r(28,24,6,6,ceu);r(38,25,30,4,'#ffd166');r(60,29,3,5,'#ffd166');r(66,29,3,5,'#ffd166');break;
+  case'mer':caixa(8,14,28,14,'#e0fbfc');caixa(60,14,28,14,'#e0fbfc');r(36,21,24,1,'#14112a');r(38,17,2,4,'#14112a');r(56,17,1,4,'#14112a');r(55,17,3,1,'#14112a');lin(12,18,20,2,'#457b9d');lin(64,18,20,2,'#457b9d');break;
+  case'portao':r(26,8,8,32,'#7b7b86');r(62,8,8,32,'#7b7b86');r(26,6,44,6,'#5c5c66');for(let i=36;i<62;i+=5)r(i,12,2,28,'#2b2b33');break;
+  case'barbearia':r(24,16,44,24,'#f1e3c6');r(22,10,48,7,'#264653');r(42,28,8,12,'#5b3a1e');r(28,22,10,6,'#a8dadc');for(let j=0;j<16;j++)r(72,16+j,4,1,['#d62828','#fff','#1d4e89'][(j+(tick>>3))%3]);break;
+  case'dragao':r(30,16,36,18,'#d62828');r(60,10,16,12,'#d62828');r(70,13,3,3,'#ffd166');r(22,8,14,10,'#9d0208');r(76,18,14,3,(tick%30<15)?'#ffb703':'#f48c06');r(34,34,6,6,'#9d0208');r(54,34,6,6,'#9d0208');break;
+  case'planilha':caixa(10,8,76,30,'#e9f5db');r(11,9,74,5,'#38b000');for(let i=1;i<5;i++)r(10+i*15,9,1,28,'#95d5b2');for(let j=1;j<4;j++)r(11,14+j*7,74,1,'#95d5b2');r(42,16,14,5,'#ffadad');break;
+  case'balanca':r(47,8,2,30,'#6c757d');r(26,10,44,2,'#6c757d');r(22,18,16,3,'#ffd166');r(58,18,16,3,'#ffd166');r(28,12,1,6,'#6c757d');r(66,12,1,6,'#6c757d');r(40,38,16,3,'#6c757d');break;
+  case'cartorio':r(26,10,44,28,'#e5e5e5');r(24,6,48,5,'#5a189a');r(56,24,10,10,'#e63946');r(58,26,6,6,'#ffd166');lin(30,14,22,6,'#adb5bd');break;
+  case'pet':r(30,20,30,14,'#d4a373');r(56,12,14,14,'#d4a373');r(58,10,3,4,'#6f4518');r(66,10,3,4,'#6f4518');r(64,17,2,2,'#14112a');r(32,34,4,6,'#6f4518');r(52,34,4,6,'#6f4518');r(24,20,6,2,'#d4a373');break;
+  case'sql':r(12,8,72,32,'#14112a');lin(16,12,40,2,'#4cc9f0');lin(20,18,50,3,'#80ed99');r(16,32,4,3,(tick%40<20)?'#f8f9fa':'#14112a');break;
+  case'forja':r(30,24,36,16,'#495057');r(36,20,24,4,'#6c757d');r(40,28,16,8,(tick%20<10)?'#f48c06':'#e85d04');r(66,14,4,16,'#adb5bd');r(64,12,8,4,'#6c757d');break;
+  case'muralha':r(8,14,80,26,'#8a8fa8');for(let i=8;i<88;i+=8)r(i,10,4,4,'#8a8fa8');for(let j=18;j<40;j+=5)r(8,j,80,1,'#6c7086');r(42,26,12,14,'#3d3550');break;
+  case'fogo':for(let i=0;i<12;i++){const h=8+((i*7+tick)%14);r(20+i*5,40-h,4,h,i%2?'#f48c06':'#e85d04')}r(36,14,24,8,'#14112a');r(39,16,18,1,'#ef233c');break;
+  case'python':r(26,10,20,14,'#3776ab');r(46,24,20,14,'#ffd43b');r(30,13,3,3,'#fff');r(59,33,3,3,'#fff');r(66,20,14,10,'#343a40');r(69,23,8,4,'#80ed99');break;
+  case'cofre':r(26,8,44,32,'#adb5bd');r(30,12,36,24,'#6c757d');r(44,20,8,8,'#ffd166');r(47,23,2,2,'#14112a');r(66,16,3,4,'#495057');break;
+  default:r(40,14,16,16,'#ffd166')}
+ return c}
+function historia(k,depois){musica('mapa');const f=LV.fases[k];let i=0;
+ function mostra(){const p=f.hist[i];const ult=i===f.hist.length-1;
+  cena(el('h2',{class:'historia'},`${LV.nome} • Região ${k+1}: ${f.nome}`),el('div',{class:'dica'},`História ${i+1} de ${f.hist.length}`),arte(p.cena),
+   el('div',{class:'npc'},retrato(p.c),el('div',{class:'fala'},el('span',{class:'quem'},p.q.toUpperCase()),p.t)),
+   p.tabela?tabelaEl(p.tabela):null,p.codigo?el('pre',{class:'cod'},p.codigo):null,
+   el('div',{class:'acoes'},PR().hist[k]?el('button',{class:'sec',type:'button',on:{click:()=>depois()}},'Pular'):null,i>0?el('button',{class:'sec',type:'button',on:{click:()=>{i--;mostra()}}},'◀ Voltar'):null,
+    el('button',{type:'button',on:{click:()=>{if(ult){PR().hist[k]=true;salvar();depois()}else{i++;mostra()}}}},ult?'Começar ▶':'Próximo ▶')))}
+ mostra()}
+function dialogo(id,depois){const n=NOD[id];const txt=el('span');let i=0;const tt=setInterval(()=>{i+=2;txt.textContent=n.fala.slice(0,i);if(i>=n.fala.length)clearInterval(tt)},18);
+ cena(el('h2',{},n.nome),el('div',{class:'npc'},retrato(n.npcCor),el('div',{class:'fala'},el('span',{class:'quem'},n.npc.toUpperCase()),txt)),
+  el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>{clearInterval(tt);fechar()}}},'Voltar ao mapa'),el('button',{class:'sec',type:'button',on:{click:()=>{clearInterval(tt);historia(n.fase,()=>abrir(id))}}},'Reler a história'),el('button',{type:'button',on:{click:()=>{clearInterval(tt);depois()}}},'Continuar ▶')))}
+function pergaminho(k,depois,rot){const c=CARDS[k];const d=el('div',{class:'perg'},el('h3',{},`PERGAMINHO • ${c.t.toUpperCase()}`));c.p.forEach(t=>d.append(el('p',{},t)));d.append(el('p',{class:'ex'},'Na barbearia: '+c.ex));
+ cena(el('h2',{},'Estude antes da batalha'),el('div',{class:'dica'},'Sala invertida: leia com calma. Você pode ser o especialista que vai explicar este tema para a turma.'),d,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'),el('button',{type:'button',on:{click:depois}},rot||'Estou pronto para a batalha ⚔')))}
+function abrir(id){const n=NOD[id];if(!PR().hist[n.fase])return historia(n.fase,()=>abrir(id));
+ if(n.tipo==='batalha'){if(PR().feito[id])return dialogo(id,()=>n.card!=null?pergaminho(n.card,fechar,'Fechar pergaminho'):fechar());return dialogo(id,()=>n.card!=null?pergaminho(n.card,()=>batalha(id)):batalha(id))}
+ if(n.tipo==='portao'){if(PR().feito[id])return toast('Portão aberto. Siga em frente!');return dialogo(id,()=>codigo(id,()=>{PR().feito[id]=true;salvar();ganharXP(10,'Portão aberto');concluiu(id)}))}
+ if(n.tipo==='missoes')return dialogo(id,()=>missoes(id));
+ if(n.tipo==='chefao'){if(PR().feito[id])return ficha();if(PR().abertos[id])return chefao(id);return dialogo(id,()=>codigo(id,()=>{PR().abertos[id]=true;salvar();chefao(id)}))}}
+function codigo(id,ok){const n=NOD[id];const inp=el('input',{id:'cod-'+id,autocomplete:'off','aria-label':'Código do Mestre',placeholder:'CÓDIGO'});const fb=el('div',{class:'fb',hidden:''});
+ const tentar=()=>{if(inp.value.trim().toUpperCase()===n.codigo){sfx('porta');ok()}else{sfx('erro');fb.hidden=false;fb.className='fb no';fb.textContent='Código errado. Peça ao Mestre (professor).';inp.classList.add('tremer');setTimeout(()=>inp.classList.remove('tremer'),400)}};
+ inp.addEventListener('keydown',e=>{if(e.key==='Enter')tentar()});
+ cena(el('h2',{},n.nome),el('div',{class:'fala'},'Digite o código que o Mestre falar:'),inp,fb,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar'),el('button',{type:'button',on:{click:tentar}},'Abrir')))}
+// conclusão de lugar / região / nível
+function concluiu(id){const k=NOD[id].fase;
+ if(faseCompleta(k)&&!PR().abertos['@fase'+k]){PR().abertos['@fase'+k]=true;salvar();setTimeout(()=>sfx('fanfarra'),350);
+  if(nivelCompleto(LV)){darSelo(LV.id);const i=LEVELS.indexOf(LV);const prox=LEVELS[i+1];if(prox)S.lib[prox.id]=true;salvar();
+   return cena(el('h2',{},`Nível ${LV.nome} concluído!`),el('div',{class:'fala'},`Você completou "${LV.titulo}". `+(prox?`O nível ${prox.nome} ("${prox.titulo}") foi liberado.`:'Você é uma lenda do Reino dos Dados!')),
+    el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Ver o mapa'),el('button',{type:'button',on:{click:telaNiveis}},'Escolher nível')))}
+  const prox=LV.fases[k+1];
+  return cena(el('h2',{},'Nova região revelada!'),arte('mapa'),el('div',{class:'fala'},`A névoa se abriu. A Região ${k+2}, ${prox.nome}, agora faz parte do seu mapa. Use "Mapa completo" para ver como as regiões se encaixam.`),
+   el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'),el('button',{type:'button',on:{click:()=>historia(k+1,()=>{const f=primeiro(k+1);viajar2(f)})}},'Ver a história ▶')))}
+ fechar()}
+function viajar2(id){fechar();setTimeout(()=>viajar(id),50)}
+
+// ---------- batalha ----------
+function batalha(id){musica('batalha');const n=NOD[id];const[nomeI,corI,olhoI]=n.inimigo;const fila=Q[n.qs].map(q=>({...q,errou:false}));const total=fila.length;let ac=0,errosB=0;
+ const mon=monstro(corI,olhoI),hp=el('i',{style:'width:100%'}),fb=el('div',{class:'fb',hidden:''}),qt=el('div',{class:'fala'}),ops=el('div',{class:'ops'}),prox=el('button',{type:'button',hidden:''},'Próximo ▶');
+ function mostra(){fb.hidden=true;prox.hidden=true;const q=fila[0];qt.textContent=q.q;ops.replaceChildren(...q.o.map((t,i)=>({t,i})).sort(()=>Math.random()-.5).map(o=>el('button',{type:'button',on:{click:ev=>resp(o.i,ev.currentTarget)}},o.t)))}
+ function resp(i,btn){const q=fila[0];ops.querySelectorAll('button').forEach(b=>b.disabled=true);
+  if(i===q.c){sfx('acerto');btn.classList.add('certo');ac++;hp.style.width=((total-ac)/total*100)+'%';mon.classList.add('tremer');setTimeout(()=>mon.classList.remove('tremer'),400);ganharXP(q.errou?3:10,'');fb.className='fb ok';fb.textContent='Acertou! '+q.e;fila.shift()}
+  else{btn.classList.add('errado');errosB++;q.errou=true;errar(id);fb.className='fb no';fb.textContent='Ai! -1 vida. Dica: '+q.e+' A pergunta volta no fim.';fila.push(fila.shift())}
+  fb.hidden=false;prox.hidden=false;prox.focus();
+  if(S.vida<=0){prox.textContent='Você desmaiou...';prox.onclick=()=>desmaio(id);return}
+  prox.textContent=fila.length?'Próximo ▶':'Vitória! ▶';prox.onclick=()=>fila.length?mostra():vitoria(id,errosB)}
+ cena(el('h2',{},'Batalha: '+nomeI),el('div',{class:'arena'},mon,el('div',{},el('div',{class:'dica'},`${nomeI} • ${total} golpes para vencer`),el('div',{class:'hpb'},hp))),qt,ops,fb,el('div',{class:'acoes'},prox));mostra()}
+function desmaio(id){sfx('desmaio');S.vida=5;salvar();hud();const n=NOD[id];cena(el('h2',{},'Você desmaiou!'),el('div',{class:'fala'},'O curandeiro recuperou as suas vidas. O XP continua. Releia a história ou o pergaminho e tente de novo.'),
+ el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'),el('button',{type:'button',on:{click:()=>n.card!=null?pergaminho(n.card,()=>batalha(id)):batalha(id)}},'Tentar de novo')))}
+function vitoria(id,errosB){sfx('vitoria');PR().feito[id]=true;S.vida=Math.min(5,S.vida+1);salvar();
+ if(id==='templo')darSelo('sigilo');if(id==='caverna'&&!errosB)darSelo('chave');if(id==='ponte'&&!errosB)darSelo('mer');hud();
+ const k=NOD[id].fase;if(faseCompleta(k)&&!PR().abertos['@fase'+k])return concluiu(id);
+ cena(el('h2',{},'Vitória!'),el('div',{class:'fala'},`${NOD[id].inimigo[0]} foi derrotado. Você recuperou 1 vida.`),el('div',{class:'acoes'},el('button',{type:'button',on:{click:fechar}},'Voltar ao mapa')))}
+
+// ---------- missões ----------
+function regrasBox(r){return el('div',{class:'regras'},...r.map(([a,b])=>el('div',{},el('b',{},a),el('span',{},b))))}
+function chipsEl(ops,sel){return el('div',{class:'chips'},...ops.map(o=>{const b=el('button',{class:'chip',type:'button','aria-pressed':'false',on:{click:()=>{sel.has(o)?sel.delete(o):sel.add(o);b.setAttribute('aria-pressed',sel.has(o))}}},o);return b}))}
+function missoes(id){const M=MISSOES[NOD[id].miss];const idx=PR().missao[id]||0;
+ if(idx>=M.lista.length){PR().feito[id]=true;salvar();if(faseCompleta(NOD[id].fase))return concluiu(id);return cena(el('h2',{},'Missões concluídas!'),el('div',{class:'fala'},'O planejamento está pronto. Falta o Chefão desta região: ele se enfrenta em EQUIPE. Espere o Mestre liberar o código.'),el('div',{class:'acoes'},el('button',{type:'button',on:{click:fechar}},'Voltar ao mapa')))}
+ const m=M.lista[idx];let errosM=0;const fb=el('div',{class:'fb',hidden:''});let corpo,ler;
+ if(m.tipo==='chips'){const sel=new Set();corpo=chipsEl(m.ops,sel);ler=()=>{const f=m.certo.filter(c=>!sel.has(c)),s=[...sel].filter(c=>!m.certo.includes(c));return{ok:!f.length&&!s.length,msg:(f.length?'Faltou: '+f.join(', ')+'. ':'')+(s.length?'Não entra: '+s.join(', ')+'. ':'')}}}
+ else{const ss=m.itens.map(([rot,ops],k)=>[rot,el('select',{id:`m-${id}-${idx}-${k}`},el('option',{value:''},'escolha...'),...ops.map(o=>el('option',{value:o},o)))]);
+  corpo=el('div',{style:'display:grid;gap:8px'},...ss.map(([rot,s])=>el('label',{class:'linha'},el('span',{},rot),s)));
+  ler=()=>{const e=m.itens.filter((it,k)=>ss[k][1].value!==it[2]).map(it=>it[0]);return{ok:!e.length,msg:e.length?'Revise: '+e.join('; ')+'.':''}}}
+ const btnC=el('button',{type:'button'},'Conferir ✓'),btnP=el('button',{type:'button',hidden:''},idx<M.lista.length-1?'Próxima missão ▶':'Concluir ▶');
+ btnC.onclick=()=>{const r=ler();fb.hidden=false;if(r.ok){sfx('acerto');fb.className='fb ok';fb.textContent='Checkpoint aprovado! '+m.e;PR().missao[id]=idx+1;salvar();ganharXP(errosM?Math.round(m.xp/2):m.xp,m.t.split('•')[0]);btnC.hidden=true;btnP.hidden=false;btnP.focus()}
+  else{errosM++;errar(id);fb.className='fb no';fb.textContent='Ainda não. '+r.msg+' (-1 vida)';if(S.vida<=0){S.vida=5;salvar();hud();fb.textContent+=' Você desmaiou, mas recuperou as vidas.'}}};
+ btnP.onclick=()=>missoes(id);
+ cena(el('h2',{},`${m.t} • ${m.xp} XP`),el('details',{open:''},el('summary',{},'Regras de negócio'),regrasBox(M.regras)),el('div',{class:'fala'},m.txt),corpo,fb,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Pausar'),btnC,btnP))}
+
+// ---------- chefão ----------
+function chefao(id){musica('chefe');sfx('chefe');const C=CHEFES[NOD[id].chefe];let k=0;const total=C.etapas.length;const mon=monstro(C.cor,C.olho),hp=el('i',{style:'width:100%'});
+ function mostra(){const et=C.etapas[k];const fb=el('div',{class:'fb',hidden:''});const prox=el('button',{type:'button',hidden:''},k<total-1?'Próximo golpe ▶':'Golpe final ▶');prox.onclick=()=>{k++;k<total?mostra():venceu()};let corpo,conf=null;
+  const acerto=()=>{sfx('acerto');corpo.querySelectorAll('button').forEach(b=>b.disabled=true);if(conf)conf.hidden=true;hp.style.width=((total-k-1)/total*100)+'%';mon.classList.add('tremer');setTimeout(()=>mon.classList.remove('tremer'),400);fb.hidden=false;fb.className='fb ok';fb.textContent='Golpe certeiro! '+et.e;prox.hidden=false;prox.focus()};
+  const erro=t=>{errar(id);fb.hidden=false;fb.className='fb no';fb.textContent=t+' (-1 vida)';if(S.vida<=0){S.vida=3;salvar();hud()}};
+  if(et.tipo==='chips'){const sel=new Set();corpo=chipsEl(et.ops,sel);conf=el('button',{type:'button',on:{click:()=>{(et.certo.every(c=>sel.has(c))&&sel.size===et.certo.length)?acerto():erro('O chefão revidou! Revise a escolha.')}}},'Atacar ⚔')}
+  else corpo=el('div',{class:'ops'},...et.o.map((t,i)=>({t,i})).sort(()=>Math.random()-.5).map(o=>el('button',{type:'button',on:{click:ev=>{if(o.i===et.c){ev.currentTarget.classList.add('certo');acerto()}else{ev.currentTarget.classList.add('errado');ev.currentTarget.disabled=true;erro('O chefão revidou! Tente outra opção.')}}}},o.t)));
+  cena(el('h2',{},'Chefão: '+C.nome),regrasBox(C.regras),el('div',{class:'arena'},mon,el('div',{},el('div',{class:'dica'},'Resolvam em EQUIPE, no quadro. Depois cada um registra aqui.'),el('div',{class:'hpb'},hp))),el('div',{class:'fala'},et.q),corpo,fb,el('div',{class:'acoes'},conf,prox))}
+ function venceu(){sfx('fanfarra');PR().feito[id]=true;salvar();ganharXP(50,'Chefão derrotado');darSelo(C.selo);
+  cena(el('h2',{},C.nome+' foi derrotado!'),el('div',{class:'fala'},C.fim),el('div',{class:'acoes'},el('button',{type:'button',on:{click:()=>concluiu(id)}},'Continuar ▶')))}
+ mostra()}
+
+// ---------- ficha, níveis, início ----------
+function ficha(){if(!S)return;const n=nivel(S.xp);
+ const blocos=LEVELS.filter(lv=>S.P[lv.id]).map(lv=>{const p=S.P[lv.id];const rows=[];lv.fases.forEach((f,k)=>Object.entries(f.lugares).forEach(([id,l])=>rows.push(el('tr',{},el('td',{},`R${k+1} • ${l.nome}`),el('td',{},p.feito[id]?'✔':'—'),el('td',{class:'num'},String(p.erros[id]||0))))));
+  return el('div',{class:'ficha'},el('h3',{class:'fh'},`${lv.nome} • ${lv.titulo}`),el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'LUGAR'),el('th',{},'OK'),el('th',{},'ERROS')),...rows)))});
+ const conf=el('div',{class:'acoes',hidden:''},el('span',{class:'dica'},'Apagar todo o progresso deste computador?'),el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=true}},'Não'),el('button',{type:'button',on:{click:()=>{try{localStorage.removeItem(KEY)}catch(e){}S=null;LV=null;fechar();inicio()}}},'Sim, recomeçar'));
+ cena(el('h2',{},'Ficha do Aventureiro'),el('div',{class:'fala'},`${S.nome} • ${n[1]} • ${S.xp} XP`),el('div',{class:'selos'},...(S.selos.length?S.selos.map(k=>el('span',{class:'selo'},SELOS[k][0])):[el('span',{class:'dica'},'Nenhum selo ainda.')])),...blocos,
+  el('div',{class:'dica'},'Mostre esta ficha ao Mestre no fim da aula para registrar o seu XP.'),el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=false}},'Recomeçar jogo'),el('button',{type:'button',on:{click:fechar}},'Fechar')),conf)}
+function entrarNivel(lv){montarNivel(lv);S.lv=lv.id;const p=PR();const pos=p.pos&&NOD[p.pos]?p.pos:primeiro(0);p.pos=pos;heroi={x:NOD[pos].x,y:NOD[pos].y};cam={x:Math.max(0,Math.min(W-VW,heroi.x-VW/2)),y:Math.max(0,Math.min(H-VH,heroi.y-VH/2))};visao=false;salvar();hud();
+ if(!p.hist[0])historia(0,fechar);else fechar()}
+function telaNiveis(){const cards=LEVELS.map((lv,i)=>{const lib=S.lib[lv.id];const p=S.P[lv.id];const tot=lv.fases.reduce((a,f)=>a+Object.values(f.lugares).filter(l=>!l.extra).length,0);const fe=p?lv.fases.reduce((a,f)=>a+Object.entries(f.lugares).filter(([id,l])=>!l.extra&&p.feito[id]).length,0):0;
+  const inp=el('input',{id:'lib-'+lv.id,placeholder:'CÓDIGO','aria-label':'Código do Mestre para '+lv.nome,autocomplete:'off',style:'width:9em'});const fb=el('span',{class:'dica'});
+  const lib2=()=>{if(inp.value.trim().toUpperCase()===lv.codigo){sfx('porta');S.lib[lv.id]=true;salvar();telaNiveis()}else{sfx('erro');fb.textContent='Código errado.';inp.classList.add('tremer');setTimeout(()=>inp.classList.remove('tremer'),400)}};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')lib2()});
+  return el('div',{class:'nv '+lv.id+(lib?'':' trava')},el('div',{class:'nvtop'},el('span',{class:'nvn'},`${i+1}. ${lv.nome.toUpperCase()}`),el('span',{class:'dica num'},`${fe}/${tot}`)),el('div',{class:'nvt'},lv.titulo),el('div',{class:'dica'},lv.aula),el('div',{class:'dica'},lv.ind),
+   lib?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{type:'button',on:{click:()=>entrarNivel(lv)}},nivelCompleto(lv)?'Rever ▶':fe?'Continuar ▶':'Jogar ▶'))
+      :el('div',{class:'acoes',style:'justify-content:flex-start;align-items:center'},inp,el('button',{class:'sec',type:'button',on:{click:lib2}},'Liberar'),fb))});
+ cena(el('h2',{},'Escolha o nível'),el('div',{class:'dica'},'Cada nível é uma etapa da UC2 e tem 4 regiões que se encaixam num mapa só. Termine um nível para liberar o próximo, ou peça o código ao Mestre.'),el('div',{class:'nvs'},...cards),
+  LV?el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa')):null)}
+function inicio(){const salvo=carregar();let av=0;
+ const avs=el('div',{class:'avs',role:'group','aria-label':'Escolha o herói'},...AVS.map((p,i)=>{const c=el('canvas',{width:8,height:11});spr(c.getContext('2d'),HERO,p,0,0);return el('button',{type:'button','aria-pressed':i===0?'true':'false','aria-label':'Herói '+(i+1),on:{click:()=>{av=i;avs.querySelectorAll('button').forEach((x,j)=>x.setAttribute('aria-pressed',j===i))}}},c)}));
+ const nome=el('input',{id:'nomeHeroi',maxlength:'20',placeholder:'Seu nome','aria-label':'Seu nome',autocomplete:'off'});
+ const comecar=()=>{const v=nome.value.trim();if(!v){nome.focus();nome.classList.add('tremer');setTimeout(()=>nome.classList.remove('tremer'),400);return}S={nome:v,av,xp:0,vida:5,selos:[],lv:'facil',lib:{facil:true},P:{}};salvar();telaNiveis()};
+ nome.addEventListener('keydown',e=>{if(e.key==='Enter')comecar()});
+ cena(el('h2',{class:'tit-inicio'},'REINO DOS DADOS'),
+  salvo&&salvo.nome?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{type:'button',on:{click:()=>{S=salvo;const lv=LEVELS.find(l=>l.id===S.lv)||LEVELS[0];entrarNivel(lv);toast('Bem-vindo de volta, '+S.nome+'!')}}},`Continuar como ${salvo.nome} ▶`)):null,
+  el('div',{class:'fala'},'O Bug do Esquecimento apagou os dados do reino. Atravesse 4 níveis (Fácil, Médio, Difícil e Expert), ouça as histórias, estude os pergaminhos, vença os monstros e construa o banco de dados da Barbearia Navalha de Ouro.'),
+  el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')));setTimeout(()=>nome.focus(),50)}
+$('btnFicha').addEventListener('click',ficha);$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
+requestAnimationFrame(desenha);inicio();
+</script></body></html>
