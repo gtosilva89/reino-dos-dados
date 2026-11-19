@@ -13,6 +13,7 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
+.cena.largo{width:min(1280px,100%)}.ph{font-family:var(--f-tit);font-size:11px;color:var(--ouro);margin:6px 0 0}.tag{display:inline-block;padding:1px 8px;color:#fff}.mini{font-size:16px;padding:2px 8px}.tb.calor td,.tb.calor th{font-size:15px;padding:2px 5px}
 button.som[aria-pressed="false"]{opacity:.6;text-decoration:line-through}
 html,body{height:100%}
 body{background:var(--noite);color:var(--texto);font-family:var(--f-txt);font-size:22px;line-height:1.15;
@@ -651,6 +652,34 @@ function botoesSom(){const a=$('btnFx'),b=$('btnMus');if(!a)return;a.textContent
 document.addEventListener('pointerdown',()=>{SOM.gesto=true;audio();if(SOM.mus&&!SOM.faixa)musica()},true);
 document.addEventListener('keydown',()=>{if(!SOM.gesto){SOM.gesto=true;audio();if(SOM.mus)musica()}},true);
 document.addEventListener('click',ev=>{const b=ev.target.closest&&ev.target.closest('button');if(b&&b.id!=='btnFx')sfx(document.querySelector('#cena .historia')&&!$('veu').hidden?'pagina':'clique')},true);
+// ===================== ENVIO PARA A PLANILHA DO PROFESSOR =====================
+// Cada vez que o jogo salva, o progresso do aluno vai (alguns segundos depois) para a planilha
+// Google do professor (Apps Script em planilha/Codigo.gs). Sem internet, fica pendente e é refeito sozinho.
+const NUVEM_URL='https://script.google.com/macros/s/AKfycbzHLqdUSzL48g-_kLPpT4iLXsN1dqD-dqoYtDcwumfRp14MTxM2TYvMcUagvW9wfG-GtQ/exec';
+const ENV_KEY='reinoDosDados_enviado';
+const normNome=n=>String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function envLer(){try{return JSON.parse(localStorage.getItem(ENV_KEY)||'{}')}catch(e){return{}}}
+function envGravar(o){try{localStorage.setItem(ENV_KEY,JSON.stringify(o))}catch(e){}}
+function contarNivel(lv,p){let t=0,f=0;lv.fases.forEach(fa=>Object.entries(fa.lugares).forEach(([id,l])=>{if(l.extra||l.tipo==='portao')return;t++;if(p&&p.feito&&p.feito[id])f++}));return{t,f}}
+function progressoTxt(x){return LEVELS.filter(lv=>x.P&&x.P[lv.id]).map(lv=>{const c=contarNivel(lv,x.P[lv.id]);return lv.nome+' '+c.f+'/'+c.t}).join(' • ')}
+let nuvemTimer=null,nuvemEstado='',nuvemQuando=0,nuvemOcupada=false;
+function nuvemPendente(x){if(!x||!x.nome||!x.ts)return false;const e=envLer();return !(e.nome===normNome(x.nome)&&e.ts===x.ts)}
+async function nuvemEnviar(x){if(!NUVEM_URL||!x||!x.nome)return false;
+ try{await fetch(NUVEM_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({nome:x.nome,data:new Date(x.ts||Date.now()).toLocaleString('pt-BR'),ts:x.ts||0,xp:x.xp||0,nivel:nivel(x.xp||0)[1],progresso:progressoTxt(x),S:x})});
+  envGravar({nome:normNome(x.nome),ts:x.ts||0});nuvemEstado='ok';nuvemQuando=Date.now();return true}
+ catch(err){nuvemEstado='falhou';return false}}
+function nuvemAgendar(){if(!NUVEM_URL||!S||!S.nome)return;nuvemEstado='pendente';clearTimeout(nuvemTimer);nuvemTimer=setTimeout(()=>nuvemEnviar(JSON.parse(JSON.stringify(S))),4000)}
+async function nuvemPendentes(){if(!NUVEM_URL||nuvemOcupada)return;nuvemOcupada=true;try{const x=carregar();if(nuvemPendente(x))await nuvemEnviar(x)}finally{nuvemOcupada=false}}
+function nuvemStatusTxt(){if(!NUVEM_URL)return'';if(nuvemEstado==='ok')return'✔ Progresso enviado ao professor às '+new Date(nuvemQuando).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.';
+ if(nuvemEstado==='falhou')return'Sem internet agora: o envio ao professor será refeito sozinho.';if(nuvemEstado==='pendente')return'Enviando o progresso ao professor…';return S&&!nuvemPendente(S)?'✔ Progresso já enviado ao professor.':''}
+async function nuvemAluno(nome){if(!NUVEM_URL)return{erro:'O professor ainda não ligou a planilha.'};
+ try{const r=await fetch(NUVEM_URL+'?aluno='+encodeURIComponent(nome)+'&t='+Date.now());const d=await r.json();if(!d.ok||!d.item||!d.item.S)return{erro:'Não achei esse nome na planilha. Digite igual ao dia em que jogou.'};return{S:d.item.S}}
+ catch(err){return{erro:'Sem conexão com a planilha agora.'}}}
+async function nuvemBaixar(chave){if(!NUVEM_URL)return{erro:'Planilha não configurada.'};
+ try{const r=await fetch(NUVEM_URL+'?chave='+encodeURIComponent(chave)+'&t='+Date.now());const d=await r.json();if(!d.ok)return{erro:d.erro==='senha'?'A planilha recusou a senha.':'Erro na planilha.'};
+  return{lista:(d.lista||[]).filter(x=>x&&x.nome&&x.S)}}catch(err){return{erro:'Sem conexão com a planilha.'}}}
+if(NUVEM_URL){setTimeout(nuvemPendentes,2000);setInterval(nuvemPendentes,60000)}
 // ===================== MOTOR =====================
 const KEY='reinoDosDados_v2';
 const OFF=[[0,0],[320,0],[320,184],[0,184]];
@@ -658,7 +687,7 @@ const W=640,H=368,VW=320,VH=184;
 let S=null, LV=null, NOD={}, EDG=[], visao=false;
 const $=id=>document.getElementById(id);
 const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else e.setAttribute(k,v)}for(const k of kids)if(k!=null&&k!==false)e.append(k.nodeType?k:document.createTextNode(k));return e};
-function salvar(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function salvar(){if(S)S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}nuvemAgendar()}
 function carregar(){try{const t=localStorage.getItem(KEY);return t?JSON.parse(t):null}catch(e){return null}}
 const PR=()=>S.P[LV.id]||(S.P[LV.id]={feito:{},erros:{},abertos:{},missao:{},hist:{},pos:null});
 function nivel(xp){let n=NIVEIS_XP[0];for(const x of NIVEIS_XP)if(xp>=x[0])n=x;return n}
@@ -789,7 +818,7 @@ cv.addEventListener('click',ev=>{if(!S||!LV)return;if(visao){alternarVisao();ret
 function alternarVisao(){visao=!visao;$('btnVisao').textContent=visao?'Voltar ao herói':'Mapa completo';$('btnVisao').setAttribute('aria-pressed',visao)}
 
 // ---------- cenas ----------
-function cena(...kids){$('cena').replaceChildren(...kids.filter(Boolean));$('veu').hidden=false;$('cena').scrollTop=0;const f=$('cena').querySelector('.acoes button:last-child,input');if(f)f.focus()}
+function cena(...kids){$('cena').classList.remove('largo');$('cena').replaceChildren(...kids.filter(Boolean));$('veu').hidden=false;$('cena').scrollTop=0;const f=$('cena').querySelector('.acoes button:last-child,input');if(f)f.focus()}
 function fechar(){$('veu').hidden=true;hud();musica('mapa')}
 function retrato(cor){const c=el('canvas',{width:16,height:16});spr(c.getContext('2d'),['....kkkkkk......','...kHHHHHHk.....','..kHHHHHHHHk....','..kFFFFFFFFk....','..kFkFFFkFFk....','..kFFFFFFFFk....','..kFFFkkFFFk....','...kFFFFFFk.....','..kCCCCCCCCk....','.kCCCCCCCCCCk...','.kCCCCCCCCCCk...','.kCCCCCCCCCCk...'],{H:cor,F:'#f1c27d',C:cor},2,2);return c}
 function monstro(cor,olho){const c=el('canvas',{width:24,height:24});spr(c.getContext('2d'),['........kkkkkkkk........','......kkMMMMMMMMkk......','.....kMMMMMMMMMMMMk.....','....kMMMMMMMMMMMMMMk....','...kMMMLLMMMMMMLLMMMk...','...kMMMLOkMMMMLOkMMMk...','..kMMMMLkkMMMMLkkMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','..kMMMkwkwkwkwkwkMMMMk..','..kMMMMkkkkkkkkkkMMMMk..','..kMMMMMMMMMMMMMMMMMMk..','.kMMMMMMMMMMMMMMMMMMMMk.','.kMMMMMMMMMMMMMMMMMMMMk.','kMMkMMMMMMkMMMMMMMMkMMMk','kkk.kkkkkk.kkkkkkk..kkk.'],{M:cor,L:'#ffffff',O:olho,w:'#ffffff'},0,4);return c}
@@ -912,7 +941,7 @@ function ficha(){if(!S)return;const n=nivel(S.xp);
   return el('div',{class:'ficha'},el('h3',{class:'fh'},`${lv.nome} • ${lv.titulo}`),el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'LUGAR'),el('th',{},'OK'),el('th',{},'ERROS')),...rows)))});
  const conf=el('div',{class:'acoes',hidden:''},el('span',{class:'dica'},'Apagar todo o progresso deste computador?'),el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=true}},'Não'),el('button',{type:'button',on:{click:()=>{try{localStorage.removeItem(KEY)}catch(e){}S=null;LV=null;fechar();inicio()}}},'Sim, recomeçar'));
  cena(el('h2',{},'Ficha do Aventureiro'),el('div',{class:'fala'},`${S.nome} • ${n[1]} • ${S.xp} XP`),el('div',{class:'selos'},...(S.selos.length?S.selos.map(k=>el('span',{class:'selo'},SELOS[k][0])):[el('span',{class:'dica'},'Nenhum selo ainda.')])),...blocos,
-  el('div',{class:'dica'},'Mostre esta ficha ao Mestre no fim da aula para registrar o seu XP.'),el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=false}},'Recomeçar jogo'),el('button',{type:'button',on:{click:fechar}},'Fechar')),conf)}
+  NUVEM_URL?el('div',{class:'dica',id:'envStatus'},nuvemStatusTxt()||'O progresso vai sozinho para o professor.'):el('div',{class:'dica'},'Mostre esta ficha ao Mestre no fim da aula para registrar o seu XP.'),NUVEM_URL?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{class:'sec',type:'button',on:{click:ev=>{const b=ev.currentTarget;b.disabled=true;$('envStatus').textContent='Enviando…';nuvemEnviar(JSON.parse(JSON.stringify(S))).then(ok=>{b.disabled=false;$('envStatus').textContent=ok?nuvemStatusTxt():'Sem internet agora: tento de novo sozinho.'})}}},'Enviar agora ao professor')):null,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=false}},'Recomeçar jogo'),el('button',{type:'button',on:{click:fechar}},'Fechar')),conf)}
 function entrarNivel(lv){montarNivel(lv);S.lv=lv.id;const p=PR();const pos=p.pos&&NOD[p.pos]?p.pos:primeiro(0);p.pos=pos;heroi={x:NOD[pos].x,y:NOD[pos].y};cam={x:Math.max(0,Math.min(W-VW,heroi.x-VW/2)),y:Math.max(0,Math.min(H-VH,heroi.y-VH/2))};visao=false;salvar();hud();
  if(!p.hist[0])historia(0,fechar);else fechar()}
 function telaNiveis(){const cards=LEVELS.map((lv,i)=>{const lib=S.lib[lv.id];const p=S.P[lv.id];const tot=lv.fases.reduce((a,f)=>a+Object.values(f.lugares).filter(l=>!l.extra).length,0);const fe=p?lv.fases.reduce((a,f)=>a+Object.entries(f.lugares).filter(([id,l])=>!l.extra&&p.feito[id]).length,0):0;
@@ -924,6 +953,14 @@ function telaNiveis(){const cards=LEVELS.map((lv,i)=>{const lib=S.lib[lv.id];con
       :el('div',{class:'acoes',style:'justify-content:flex-start;align-items:center'},inp,el('button',{class:'sec',type:'button',on:{click:lib2}},'Liberar'),fb))});
  cena(el('h2',{},'Escolha o nível'),el('div',{class:'dica'},'Cada nível é uma etapa da UC2 e tem 4 regiões que se encaixam num mapa só. Termine um nível para liberar o próximo, ou peça o código ao Mestre.'),el('div',{class:'nvs'},...cards),
   LV?el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa')):null)}
+function outroPC(){const inp=el('input',{id:'nomeOutro',maxlength:'20',placeholder:'Seu nome (igual ao do outro dia)','aria-label':'Seu nome',autocomplete:'off'});const fb=el('div',{class:'fb no',hidden:''});
+ const ir=async()=>{const v=inp.value.trim();if(!v){inp.focus();return}fb.hidden=false;fb.className='fb';fb.textContent='Buscando o seu progresso…';
+  const loc=carregar();if(nuvemPendente(loc))await nuvemEnviar(loc);
+  const r=await nuvemAluno(v);if(r.erro){fb.className='fb no';fb.textContent=r.erro;return}
+  S=r.S;salvar();sfx('porta');const lv=LEVELS.find(l=>l.id===S.lv)||LEVELS[0];entrarNivel(lv);toast('Bem-vindo de volta, '+S.nome+'!')};
+ inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')ir()});
+ cena(el('h2',{},'Continuar de outro computador'),el('div',{class:'fala'},'Digite o seu nome do jeito que você escreveu quando jogou. O jogo busca o seu progresso na planilha do professor.'),inp,fb,
+  el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:inicio}},'Voltar'),el('button',{type:'button',on:{click:ir}},'Buscar ▶')));setTimeout(()=>inp.focus(),50)}
 function inicio(){const salvo=carregar();let av=0;
  const avs=el('div',{class:'avs',role:'group','aria-label':'Escolha o herói'},...AVS.map((p,i)=>{const c=el('canvas',{width:8,height:11});spr(c.getContext('2d'),HERO,p,0,0);return el('button',{type:'button','aria-pressed':i===0?'true':'false','aria-label':'Herói '+(i+1),on:{click:()=>{av=i;avs.querySelectorAll('button').forEach((x,j)=>x.setAttribute('aria-pressed',j===i))}}},c)}));
  const nome=el('input',{id:'nomeHeroi',maxlength:'20',placeholder:'Seu nome','aria-label':'Seu nome',autocomplete:'off'});
@@ -932,7 +969,65 @@ function inicio(){const salvo=carregar();let av=0;
  cena(el('h2',{class:'tit-inicio'},'REINO DOS DADOS'),
   salvo&&salvo.nome?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{type:'button',on:{click:()=>{S=salvo;const lv=LEVELS.find(l=>l.id===S.lv)||LEVELS[0];entrarNivel(lv);toast('Bem-vindo de volta, '+S.nome+'!')}}},`Continuar como ${salvo.nome} ▶`)):null,
   el('div',{class:'fala'},'O Bug do Esquecimento apagou os dados do reino. Atravesse 4 níveis (Fácil, Médio, Difícil e Expert), ouça as histórias, estude os pergaminhos, vença os monstros e construa o banco de dados da Barbearia Navalha de Ouro.'),
-  el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')));setTimeout(()=>nome.focus(),50)}
+  el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},NUVEM_URL?el('button',{class:'sec',type:'button',on:{click:outroPC}},'Já joguei em outro computador'):null,el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')),
+  el('div',{class:'acoes',style:'justify-content:flex-end'},el('button',{class:'sec mini',type:'button',on:{click:areaProfessor}},'Área do Professor 🔒')));setTimeout(()=>nome.focus(),50)}
 $('btnFicha').addEventListener('click',ficha);$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
 requestAnimationFrame(desenha);inicio();
+// ===================== ÁREA DO PROFESSOR (com senha) =====================
+// Busca na planilha o progresso de todos os alunos. Proteção simples: o arquivo guarda só um "resumo" da senha.
+const SENHA_H=3751928130;
+function senhaOk(t){let h=2166136261>>>0;const s='rd|'+normNome(t);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h===SENHA_H}
+const IND_NIVEL={facil:[1,2],medio:[2,4],dificil:[3,4],expert:[5,6]};
+const IND_TXT={1:'Define a arquitetura do BD',2:'Planeja o BD (regras de negócio)',3:'Desenvolve as estruturas',4:'Modela o BD',5:'Avalia a persistência',6:'Atualização, permissões e backup'};
+const BAT=LEVELS.flatMap(lv=>lv.fases.flatMap(f=>Object.entries(f.lugares).filter(([id,l])=>l.tipo==='batalha').map(([id,l])=>({lv:lv.id,lvn:lv.nome,id,nome:l.nome}))));
+const PROF_KEY='reinoDosDados_prof';
+let profAberto=false,senhaProf='',profLista=null,profMsg='';
+try{profLista=JSON.parse(localStorage.getItem(PROF_KEY)||'null')}catch(e){}
+const escH=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function analisar(x){const out={niveis:{},sug:{},atencao:[]};const lugaresInd={1:[],2:[],3:[],4:[],5:[],6:[]};
+ for(const lv of LEVELS){const p=(x.P||{})[lv.id];const c=contarNivel(lv,p);out.niveis[lv.id]=p?c:null;if(!p)continue;
+  lv.fases.forEach(f=>Object.entries(f.lugares).forEach(([id,l])=>{if(l.extra||l.tipo==='portao')return;const feito=!!p.feito[id],er=(p.erros||{})[id]||0;const it={nome:l.nome,lv:lv.nome,feito,er,bom:feito&&er<=1};
+   IND_NIVEL[lv.id].forEach(i=>lugaresInd[i].push(it));if(l.tipo==='batalha'&&(er>=2||!feito))out.atencao.push(it)}))}
+ for(const i in lugaresInd){const L=lugaresInd[i];if(!L.length){out.sug[i]='—';continue}const fe=L.filter(z=>z.feito).length,bons=L.filter(z=>z.bom).length;out.sug[i]=fe===L.length&&bons/L.length>=0.7?'A':fe/L.length>=0.5?'PA':'NA'}
+ out.atencao=out.atencao.filter(z=>z.feito||z.er>0).sort((a,b)=>b.er-a.er).slice(0,4);return out}
+function baixarArq(nome,conteudo,tipo){const b=new Blob([conteudo],{type:tipo});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function alunosProf(){const m=new Map();for(const it of profLista||[])m.set(normNome(it.nome),{...it.S,nome:it.nome,_data:it.data,_ts:it.ts||0});
+ const loc=carregar();if(loc&&loc.nome&&!m.has(normNome(loc.nome)))m.set(normNome(loc.nome),{...loc,_data:'só neste PC',_ts:loc.ts||0});
+ return[...m.values()].sort((a,b)=>a.nome.localeCompare(b.nome))}
+function csvProf(AL){const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+ const cab=['Aluno','Salvo em','XP','Nível',...LEVELS.map(l=>l.nome),...[1,2,3,4,5,6].map(i=>'Ind '+i),'Atenção',...BAT.map(b=>'Erros '+b.lvn+' '+b.nome)];
+ const rows=AL.map(x=>{const a=analisar(x);return[x.nome,x._data||'',x.xp||0,nivel(x.xp||0)[1],...LEVELS.map(l=>a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:''),...[1,2,3,4,5,6].map(i=>a.sug[i]),a.atencao.map(z=>z.nome).join('; '),
+  ...BAT.map(b=>{const p=(x.P||{})[b.lv];if(!p)return'';return p.feito[b.id]?((p.erros||{})[b.id]||0):'não fez'})]});
+ baixarArq('reino-dos-dados_turma.csv','﻿'+[cab,...rows].map(r=>r.map(q).join(';')).join('\r\n'),'text/csv')}
+function areaProfessor(){if(profAberto)return painelProf();
+ const inp=el('input',{id:'senhaProf',type:'password',autocomplete:'off','aria-label':'Senha do professor',placeholder:'Senha'});const fb=el('div',{class:'fb no',hidden:''});
+ const ok=()=>{if(senhaOk(inp.value)){profAberto=true;senhaProf=inp.value;sfx('porta');painelProf(true)}else{sfx('erro');fb.hidden=false;fb.textContent='Senha errada.';inp.value='';inp.classList.add('tremer');setTimeout(()=>inp.classList.remove('tremer'),400)}};
+ inp.addEventListener('keydown',e=>{if(e.key==='Enter')ok()});
+ cena(el('h2',{},'Área do Professor 🔒'),el('div',{class:'fala'},'Digite a senha do professor:'),inp,fb,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>{fechar();inicio()}}},'Voltar'),el('button',{type:'button',on:{click:ok}},'Entrar')))}
+const corSug={A:'#1b7f3b',PA:'#b7791f',NA:'#c53030','—':'#555'};
+function painelProf(buscar){const AL=alunosProf();const saida=el('div',{});
+ const nst=el('div',{class:'dica',id:'nuvemStatus'},NUVEM_URL?(profMsg||'Clique em Atualizar da planilha para buscar os salvamentos.'):'Planilha do professor não configurada: aparece só quem jogou neste computador.');
+ const atualizar=()=>{nst.textContent='Buscando os salvamentos na planilha…';nuvemBaixar(senhaProf).then(r=>{if(r.erro){profMsg=r.erro;nst.textContent=r.erro;return}
+  profLista=r.lista;try{localStorage.setItem(PROF_KEY,JSON.stringify(profLista))}catch(e){}profMsg=`Planilha: ${r.lista.length} aluno(s), atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`;painelProf()})};
+ if(buscar&&NUVEM_URL)setTimeout(atualizar,50);
+ if(AL.length){
+  const linhas=AL.map(x=>{const a=analisar(x);return `<tr><td>${escH(x.nome)}</td><td>${escH(x._data||'')}</td><td class="num">${x.xp||0}</td><td>${escH(nivel(x.xp||0)[1])}</td>${LEVELS.map(l=>`<td>${a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:'—'}</td>`).join('')}${[1,2,3,4,5,6].map(i=>`<td><span class="tag" style="background:${corSug[a.sug[i]]}">${a.sug[i]}</span></td>`).join('')}<td>${a.atencao.map(z=>escH(z.nome)).join(', ')||'—'}</td></tr>`}).join('');
+  const cel=(t,c)=>`<td style="background:${c};text-align:center">${t}</td>`;
+  const calor=AL.map(x=>`<tr><td>${escH(x.nome)}</td>${BAT.map(b=>{const p=(x.P||{})[b.lv];if(!p)return cel('','#1a1533');const e=(p.erros||{})[b.id]||0,f=p.feito&&p.feito[b.id];return cel(f?(e>=4?'4+':e):(e?e:'·'),!f?'#3d3550':e===0?'#2d6a4f':e<=1?'#55a630':e<=3?'#e09f3e':'#9e2a2b')}).join('')}</tr>`).join('');
+  const soma=BAT.map(b=>AL.reduce((t,x)=>t+((((x.P||{})[b.lv]||{}).erros||{})[b.id]||0),0));
+  const top=BAT.map((b,i)=>[b,soma[i]]).filter(z=>z[1]>0).sort((p,q)=>q[1]-p[1]).slice(0,6);
+  saida.innerHTML=`<h3 class="ph">TURMA (${AL.length} alunos)</h3><div class="tbw"><table class="tb"><tr><th>Aluno</th><th>Salvo em</th><th>XP</th><th>Nível</th>${LEVELS.map(l=>`<th>${escH(l.nome)}</th>`).join('')}${[1,2,3,4,5,6].map(i=>`<th title="${escH(IND_TXT[i])}">Ind. ${i}</th>`).join('')}<th>Atenção</th></tr>${linhas}</table></div>
+  <div class="dica">Ind. 1 a 6 = sugestão A / PA / NA a partir do jogo (só dos níveis que o aluno começou; — = ainda não começou). A menção é sua: confirme com a observação em sala.</div>
+  <h3 class="ph">BATALHAS QUE MAIS DERRUBARAM A TURMA</h3>${top.length?'<ol>'+top.map(([b,n])=>`<li>${escH(b.lvn)} • ${escH(b.nome)}: ${n} erro(s) somados</li>`).join('')+'</ol>':'<p class="dica">Nenhum erro registrado.</p>'}
+  <h3 class="ph">MAPA DE CALOR (erros por batalha)</h3><div class="dica">Verde = 0 ou 1 erro; laranja = 2 ou 3; vermelho = 4 ou mais; · = não concluída; escuro = nível não começado.</div>
+  <div class="tbw"><table class="tb calor"><tr><th>Aluno</th>${BAT.map(b=>`<th title="${escH(b.lvn)}">${escH(b.nome)}</th>`).join('')}</tr>${calor}</table></div>`}
+ else saida.append(el('div',{class:'fala'},'Ainda não há salvamentos. Peça para os alunos jogarem: o progresso chega sozinho na planilha.'));
+ const barra=el('div',{class:'acoes',style:'justify-content:flex-start;flex-wrap:wrap'},NUVEM_URL?el('button',{type:'button',on:{click:atualizar}},'Atualizar da planilha ⟳'):null,
+  AL.length?el('button',{class:'sec',type:'button',on:{click:()=>csvProf(AL)}},'Baixar planilha (CSV)'):null);
+ cena(el('h2',{},'Área do Professor • progresso da turma'),
+  el('h3',{class:'ph'},'CÓDIGOS DO MESTRE (não mostrar aos alunos)'),
+  el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'Código'),el('th',{},'Onde')),
+   ...[['NAVALHA','Fácil • Portão do Mestre (Região 3)'],['DRAGAO','Fácil • Castelo do Dragão N:N (chefão)'],['MODELO','Tela Níveis • libera o Médio'],['HIDRA','Médio • Lago da Hidra (chefão)'],['CREATE','Tela Níveis • libera o Difícil'],['WHERE','Difícil • Covil do Golem (chefão)'],['PYTHON','Tela Níveis • libera o Expert'],['APAGAO','Expert • Covil do Dragão do Apagão (chefão)']].map(([c,o])=>el('tr',{},el('td',{},el('b',{},c)),el('td',{},o))))),
+  nst,barra,saida,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>{profAberto=false;fechar();inicio()}}},'Sair da área (trancar)')));
+ $('cena').classList.add('largo')}
 </script></body></html>
