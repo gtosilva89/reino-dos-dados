@@ -610,6 +610,84 @@ const SELOS = {
  expert:['Expert concluído','Terminou a Cidadela da Persistência']
 };
 const LEVELS = [L_FACIL, L_MEDIO, L_DIFICIL, L_EXPERT];
+// ===================== CONTEÚDO EXTRA (19/11): ferramentas, aplicabilidade da normalização e documentação =====================
+CARDS.push(
+ {t:'Ferramentas de modelagem', p:[
+  'Desenhar o MER no papel ajuda a pensar. No projeto de verdade usamos FERRAMENTAS DE MODELAGEM: fica fácil corrigir, compartilhar com a equipe e guardar junto com o sistema.',
+  'brModelo: ferramenta brasileira e gratuita, feita para o ensino. Desenha o modelo conceitual (MER) e converte para o modelo lógico (tabelas).',
+  'draw.io (diagrams.net): desenho livre e gratuito, no navegador. Tem formas de entidade e de tabela, mas é só desenho: não conversa com o banco.',
+  'dbdiagram.io: você escreve as tabelas em texto e ele desenha o diagrama; também exporta o SQL para PostgreSQL.',
+  'pgAdmin (ERD Tool) e DBeaver: ligados ao próprio banco. Mostram o diagrama das tabelas que já existem (engenharia reversa) e geram SQL a partir do desenho.',
+  'Os três modelos: CONCEITUAL (o MER, as ideias), LÓGICO (tabelas, PK, FK e tipos) e FÍSICO (o script SQL do SGBD escolhido, como o PostgreSQL).'],
+  ex:'Desenhe o MER da barbearia no brModelo, converta para o modelo lógico e, depois de criar as tabelas, confira no ERD Tool do pgAdmin se o banco ficou igual ao desenho.'},
+ {t:'Normalizar ou não? (aplicabilidade)', p:[
+  'Normalizar tira repetição e evita anomalias. Em sistemas do dia a dia (cadastros, agendamentos, vendas) normalizamos até a 3FN: é o padrão do mercado.',
+  'Existem formas além da 3FN (FNBC, 4FN e 5FN). Elas tratam casos raros; na maioria dos sistemas a 3FN já resolve.',
+  'Normalizar demais também custa: muitas tabelas pequenas pedem muitos JOINs, e relatórios grandes podem ficar lentos.',
+  'DESNORMALIZAR é repetir um dado DE PROPÓSITO, com um motivo claro: guardar a história ou acelerar um relatório que pesa.',
+  'Antes de desnormalizar, tente uma VIEW ou um índice e meça. Se decidir repetir, escreva o motivo no dicionário de dados.'],
+  ex:'servico.preco sobe em dezembro, mas agendamento_servico.preco_cobrado guarda o valor do dia. Parece repetição, mas é regra de negócio: o histórico não pode mudar.'},
+ {t:'Documentação técnica do banco', p:[
+  'Banco sem documentação só o autor entende, e por pouco tempo. A documentação deixa a equipe trabalhar e o cliente confiar.',
+  'O kit do banco: 1) regras de negócio numeradas; 2) MER e modelo relacional; 3) dicionário de dados; 4) scripts SQL de criação e carga, versionados no Git; 5) usuários e permissões; 6) política de backup e de restauração; 7) histórico de mudanças.',
+  'Relatório técnico: título, data e autor; objetivo; o que foi feito (passo a passo); resultados (prints, tabelas); problemas encontrados e próximos passos. Linguagem clara, sem gíria.',
+  'Documento bom é documento atualizado: mudou o banco, muda o documento. O README do repositório explica como instalar, criar o banco e rodar o sistema.',
+  'Senha real nunca vai em documento compartilhado. Escreva "senha com o responsável" e guarde-a em local seguro.'],
+  ex:'Ao entregar o banco, o Seu Jair recebe as RNs, o MER, o dicionário, o script barbearia.sql, quem pode fazer o quê e como o backup é feito e testado.'});
+const CARD_FERR=CARDS.length-3,CARD_APLIC=CARDS.length-2,CARD_DOC=CARDS.length-1;
+Object.assign(Q,{
+ m_ferr:[
+  {q:'Qual ferramenta é gratuita, brasileira e feita para desenhar o MER e convertê-lo em tabelas?', o:['brModelo','Excel','Paint','Bloco de Notas'], c:0, e:'O brModelo vai do conceitual (MER) ao lógico (tabelas).'},
+  {q:'No dbdiagram.io, como se cria o diagrama?', o:['Escrevendo as tabelas em texto: ele desenha sozinho','Tirando foto do caderno','Arrastando planilhas do Excel','Gravando um áudio'], c:0, e:'Texto vira diagrama, e o diagrama pode virar SQL.'},
+  {q:'O banco já existe no PostgreSQL e você quer ver o diagrama das tabelas. O que usar?', o:['O ERD Tool do pgAdmin ou o DBeaver (engenharia reversa)','O Paint','Um print da tela do SELECT','O Word'], c:0, e:'Engenharia reversa: o diagrama nasce das tabelas que já existem.'},
+  {q:'Qual modelo mostra tabelas, PK, FK e tipos, mas ainda sem o SQL de um SGBD específico?', o:['Modelo lógico','Modelo conceitual','Modelo físico','Modelo de negócio'], c:0, e:'Conceitual = ideias; lógico = tabelas; físico = SQL.'},
+  {q:'O script CREATE TABLE escrito para o PostgreSQL é o modelo...', o:['Físico','Conceitual','Lógico','Mental'], c:0, e:'É o modelo pronto para um SGBD específico.'},
+  {q:'O draw.io gera o banco sozinho a partir do desenho?', o:['Não: é desenho livre, não conversa com o banco','Sim, sempre','Só no celular','Só se o desenho for azul'], c:0, e:'Para gerar SQL, use brModelo, dbdiagram ou pgAdmin.'}],
+ m_aplic:[
+  {q:'Até qual forma normal costumamos normalizar sistemas do dia a dia?', o:['3FN','1FN','5FN','Nenhuma'], c:0, e:'A 3FN é o padrão do mercado.'},
+  {q:'O que é desnormalizar?', o:['Repetir um dado de propósito, com um motivo claro','Apagar as chaves primárias','Juntar todas as tabelas numa só, sempre','Trocar de SGBD'], c:0, e:'É uma decisão consciente e documentada.'},
+  {q:'preco_cobrado repete o preço do serviço. Por que isso está certo?', o:['Guarda o valor do dia: o histórico não muda quando o preço sobe','Porque repetir é sempre bom','Porque o PostgreSQL obriga','Não está certo'], c:0, e:'É desnormalização com motivo de negócio.'},
+  {q:'Um relatório com 7 JOINs está lento. Qual o primeiro passo antes de desnormalizar?', o:['Testar uma VIEW ou um índice e medir','Apagar tabelas','Voltar para o Excel','Tirar as FKs'], c:0, e:'Desnormalizar é o último recurso.'},
+  {q:'Qual o risco de repetir dados sem cuidado?', o:['As cópias ficarem diferentes (inconsistência)','O banco perder a PK','O SQL parar de funcionar','Nenhum'], c:0, e:'É a anomalia de alteração voltando.'},
+  {q:'Você decidiu repetir um dado de propósito. O que fazer?', o:['Escrever o motivo no dicionário de dados','Não contar para ninguém','Apagar o dicionário','Repetir em todas as tabelas'], c:0, e:'Quem chegar depois precisa entender a decisão.'}],
+ e_doc:[
+  {q:'Qual documento descreve cada campo: nome, tipo, tamanho, obrigatório, chave e descrição?', o:['Dicionário de dados','README','Relatório de backup','Contrato'], c:0, e:'É o manual dos campos.'},
+  {q:'Onde é melhor guardar os scripts SQL de criação do banco?', o:['No repositório Git, com versões','No pendrive de um colega','No grupo do WhatsApp','Em lugar nenhum'], c:0, e:'Com versões, dá para saber o que mudou e quando.'},
+  {q:'Um relatório técnico de teste precisa ter...', o:['Objetivo, o que foi feito, resultados e problemas encontrados','Só o título','A senha do banco','Uma foto da turma'], c:0, e:'Quem lê precisa entender e repetir o teste.'},
+  {q:'O banco ganhou uma coluna nova (ALTER TABLE). E a documentação?', o:['Atualiza o dicionário e o histórico de mudanças','Fica como está','É apagada','Só muda no fim do ano'], c:0, e:'Documento desatualizado engana.'},
+  {q:'O que NÃO deve ir para um documento compartilhado?', o:['A senha real do banco','O nome das tabelas','O MER','A política de backup'], c:0, e:'Senha fica com o responsável, em local seguro.'},
+  {q:'Para que serve o README do repositório?', o:['Explicar como instalar, criar o banco e rodar o sistema','Guardar os dados dos clientes','Substituir o backup','Esconder o código'], c:0, e:'É a porta de entrada do projeto.'}]});
+MISSOES.documentacao={regras:[
+  ['Pedido','O Seu Jair vai contratar outro programador para cuidar do sistema. Ele precisa receber o banco DOCUMENTADO.'],
+  ['Regra','Senha real nunca vai em documento compartilhado.']],
+ lista:[
+  {t:'Missão 1 • O kit de documentos',xp:20,txt:'Marque tudo o que entra na documentação técnica do banco da barbearia.',tipo:'chips',
+   ops:['Regras de negócio (RN01, RN02...)','MER e modelo relacional','Dicionário de dados','Script barbearia.sql no Git','Usuários e permissões','Política de backup e restauração','Senha do usuário postgres','Print da conversa com o cliente'],
+   certo:['Regras de negócio (RN01, RN02...)','MER e modelo relacional','Dicionário de dados','Script barbearia.sql no Git','Usuários e permissões','Política de backup e restauração'],
+   e:'Senha e conversas pessoais não vão no documento.'},
+  {t:'Missão 2 • Uma linha do dicionário',xp:20,txt:'Complete o dicionário do campo agendamento_servico.preco_cobrado.',tipo:'sel',
+   itens:[['Tipo',['VARCHAR(10)','NUMERIC(6,2)','DATE'],'NUMERIC(6,2)'],['Obrigatório',['não','sim'],'sim'],['Chave',['PK','FK','nenhuma'],'nenhuma'],['Descrição',['Preço atual do serviço','Valor cobrado no dia do atendimento (não muda se o preço subir)','Senha do caixa'],'Valor cobrado no dia do atendimento (não muda se o preço subir)']],
+   e:'A descrição explica até a desnormalização: é o valor do dia.'},
+  {t:'Missão 3 • Relatório técnico',xp:30,txt:'Coloque em ordem as partes do relatório do teste de persistência.',tipo:'sel',
+   itens:[['1ª parte',['Resultados','Objetivo do teste','Próximos passos'],'Objetivo do teste'],['2ª parte',['Conclusão','O que foi feito (passo a passo)','Título'],'O que foi feito (passo a passo)'],['3ª parte',['Objetivo do teste','Agradecimentos','Resultados (prints e tabelas)'],'Resultados (prints e tabelas)'],['4ª parte',['Problemas encontrados e próximos passos','Senha do banco','Título'],'Problemas encontrados e próximos passos']],
+   e:'Objetivo → o que foi feito → resultados → problemas e próximos passos.'}]};
+// --- Médio, Região 2: Mirante da Desnormalização
+(()=>{const f=L_MEDIO.fases[1];
+ f.hist.push({q:'Alpinista', c:'#90be6d', cena:'balanca', t:'Do alto do Mirante dá para ver: normalizar até a 3FN é o padrão. Mas às vezes repetimos um dado DE PROPÓSITO, como o preco_cobrado, que guarda o valor do dia. Isso é desnormalizar, e precisa de um motivo escrito no dicionário.'});
+ f.lugares.mirante={x:255,y:55,nome:'Mirante da Desnormalização',ic:'torre',tipo:'batalha',card:CARD_APLIC,npc:'Alpinista',npcCor:'#90be6d',fala:'O Gigante do Excesso quer normalizar até o que não precisa. Mostre quando normalizar e quando repetir de propósito.',inimigo:['Gigante do Excesso','#6c584c','#e63946'],qs:'m_aplic'};
+ f.pre.mirante=['pico'];f.edges.push(['pico','mirante'])})();
+// --- Médio, Região 4: Oficina das Ferramentas (entrada da região)
+(()=>{const f=L_MEDIO.fases[3];
+ f.hist.splice(1,0,{q:'Arquiteta', c:'#ff7b00', cena:'pc', t:'Antes de desenhar, escolha a ferramenta: brModelo (MER e conversão para tabelas), draw.io (desenho livre), dbdiagram.io (tabelas escritas em texto) e o ERD Tool do pgAdmin (diagrama ligado ao banco). Passe primeiro pela Oficina das Ferramentas.'});
+ f.lugares={oficina:{x:250,y:160,nome:'Oficina das Ferramentas',ic:'forja',tipo:'batalha',card:CARD_FERR,npc:'Arquiteta',npcCor:'#ff7b00',fala:'O Rabisco Perdido acha que dá para modelar tudo num guardanapo. Mostre as ferramentas de modelagem.',inimigo:['Rabisco Perdido','#adb5bd','#3a86ff'],qs:'m_ferr'},...f.lugares};
+ f.pre.oficina=[];f.pre.atelie=['oficina'];f.edges.push(['oficina','atelie'])})();
+// --- Expert, Região 4: Torre do Escriba e Arquivo Técnico (antes do chefão)
+(()=>{const f=L_EXPERT.fases[3];
+ f.hist.splice(f.hist.length-1,0,{q:'Escriba', c:'#8d6e63', cena:'livro', t:'Um banco só está pronto quando outra pessoa consegue cuidar dele. Por isso entregamos a DOCUMENTAÇÃO: regras, MER, dicionário, scripts no Git, permissões e política de backup. E um relatório técnico de cada teste importante.'});
+ f.lugares.escriba={x:200,y:160,nome:'Torre do Escriba',ic:'biblioteca',tipo:'batalha',card:CARD_DOC,npc:'Escriba',npcCor:'#8d6e63',fala:'A Névoa do "Ninguém Anotou" apagou tudo o que não estava escrito. Mostre como se documenta um banco.',inimigo:['Névoa do Ninguém Anotou','#adb5bd','#6c757d'],qs:'e_doc'};
+ f.lugares.documentos={x:120,y:140,nome:'Arquivo Técnico',ic:'cartorio',tipo:'missoes',miss:'documentacao',npc:'Escriba',npcCor:'#8d6e63',fala:'O Seu Jair vai contratar outro programador. Monte a documentação do banco para a entrega.'};
+ f.pre.escriba=['cofre'];f.pre.documentos=['escriba'];f.pre.apagao=['documentos'];
+ f.edges=f.edges.filter(e=>!(e[0]==='cofre'&&e[1]==='apagao'));f.edges.push(['cofre','escriba'],['escriba','documentos'],['documentos','apagao'])})();
 // ===================== SOM (8 bits, gerado no navegador) =====================
 const SOM={gesto:false,querida:'mapa',ctx:null,master:null,musG:null,fx:true,mus:true,faixa:null,passo:0,prox:0,timer:null};
 try{const p=JSON.parse(localStorage.getItem('reinoDosDados_som')||'{}');if(p.fx===false)SOM.fx=false;if(p.mus===false)SOM.mus=false}catch(e){}
