@@ -145,6 +145,7 @@ pre.resp{white-space:pre-wrap;font-family:var(--f-txt);font-size:18px;margin:4px
     <button class="sec" id="btnVisao" type="button" aria-pressed="false">Mapa completo</button>
     <button class="sec" id="btnNiveis" type="button">Níveis</button>
     <button class="sec" id="btnFicha" type="button">Ficha</button>
+    <button class="sec" id="btnSalvar" type="button">💾 Salvar</button>
     <button class="sec" id="btnCod" type="button">🔑 Meus códigos</button>
     <button class="sec som" id="btnFx" type="button" aria-pressed="true">Efeitos: sim</button>
     <button class="sec som" id="btnMus" type="button" aria-pressed="true">Música: sim</button>
@@ -2512,15 +2513,17 @@ let nuvemTimer=null,nuvemEstado='',nuvemQuando=0,nuvemOcupada=false;
 function nuvemPendente(x){if(!x||!x.nome||!x.ts)return false;const e=envLer();return !(e.nome===normNome(x.nome)&&e.ts===x.ts)}
 async function nuvemEnviar(x){if(!NUVEM_URL||!x||!x.nome)return false;
  try{await fetch(NUVEM_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
-   body:JSON.stringify({nome:x.nome,data:new Date(x.ts||Date.now()).toLocaleString('pt-BR'),ts:x.ts||0,xp:x.xp||0,nivel:nivel(x.xp||0)[1],progresso:progressoTxt(x),S:x})});
+   body:JSON.stringify({nome:x.nome,data:new Date(x.ts||Date.now()).toLocaleString('pt-BR'),ts:x.ts||0,xp:x.xp||0,nivel:nivel(x.xp||0)[1],progresso:(x.cod?'Código '+x.cod+' • ':'')+progressoTxt(x),S:x})});
   envGravar({nome:normNome(x.nome),ts:x.ts||0});nuvemEstado='ok';nuvemQuando=Date.now();return true}
  catch(err){nuvemEstado='falhou';return false}}
 function nuvemAgendar(){if(!NUVEM_URL||!S||!S.nome)return;nuvemEstado='pendente';clearTimeout(nuvemTimer);nuvemTimer=setTimeout(()=>nuvemEnviar(JSON.parse(JSON.stringify(S))),4000)}
 async function nuvemPendentes(){if(!NUVEM_URL||nuvemOcupada)return;nuvemOcupada=true;try{const x=carregar();if(nuvemPendente(x))await nuvemEnviar(x)}finally{nuvemOcupada=false}}
 function nuvemStatusTxt(){if(!NUVEM_URL)return'';if(nuvemEstado==='ok')return'✔ Progresso enviado ao professor às '+new Date(nuvemQuando).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.';
  if(nuvemEstado==='falhou')return'Sem internet agora: o envio ao professor será refeito sozinho.';if(nuvemEstado==='pendente')return'Enviando o progresso ao professor…';return S&&!nuvemPendente(S)?'✔ Progresso já enviado ao professor.':''}
-async function nuvemAluno(nome){if(!NUVEM_URL)return{erro:'O professor ainda não ligou a planilha.'};
- try{const r=await fetch(NUVEM_URL+'?aluno='+encodeURIComponent(nome)+'&t='+Date.now());const d=await r.json();if(!d.ok||!d.item||!d.item.S)return{erro:'Não achei esse nome na planilha. Digite igual ao dia em que jogou.'};return{S:d.item.S}}
+async function nuvemAluno(txt){if(!NUVEM_URL)return{erro:'O professor ainda não ligou a planilha.'};
+ const t=String(txt).trim();const cod=/^[A-Za-z0-9]+-[A-Za-z0-9]{4}$/.test(t)?t.toUpperCase():null;const nome=cod?cod.split('-')[0]:t;
+ try{const r=await fetch(NUVEM_URL+'?aluno='+encodeURIComponent(nome)+'&t='+Date.now());const d=await r.json();if(!d.ok||!d.item||!d.item.S)return{erro:cod?'Não achei esse código na planilha. Confira as letras e os números.':'Não achei esse nome na planilha. Digite igual ao dia em que jogou.'};
+  if(cod&&d.item.S.cod&&d.item.S.cod.toUpperCase()!==cod)return{erro:'Código errado. Confira as 4 letras/números depois do traço.'};return{S:d.item.S}}
  catch(err){return{erro:'Sem conexão com a planilha agora.'}}}
 async function nuvemBaixar(chave){if(!NUVEM_URL)return{erro:'Planilha não configurada.'};
  try{const r=await fetch(NUVEM_URL+'?chave='+encodeURIComponent(chave)+'&t='+Date.now());const d=await r.json();if(!d.ok)return{erro:d.erro==='senha'?'A planilha recusou a senha.':'Erro na planilha.'};
@@ -2533,7 +2536,8 @@ const W=640,H=368,VW=320,VH=184;
 let S=null, LV=null, NOD={}, EDG=[], visao=false;
 const $=id=>document.getElementById(id);
 const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='on')for(const[ev,f]of Object.entries(v))e.addEventListener(ev,f);else e.setAttribute(k,v)}for(const k of kids)if(k!=null&&k!==false)e.append(k.nodeType?k:document.createTextNode(k));return e};
-function salvar(){if(S)S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}nuvemAgendar()}
+function codSalvo(){if(S&&S.nome&&!S.cod){const L='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let r='';for(let i=0;i<4;i++)r+=L[Math.floor(Math.random()*L.length)];S.cod=normNome(S.nome).toUpperCase()+'-'+r}return S&&S.cod}
+function salvar(){if(S){S.ts=Date.now();codSalvo()}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}nuvemAgendar()}
 function carregar(){try{const t=localStorage.getItem(KEY);return t?JSON.parse(t):null}catch(e){return null}}
 const PR=()=>S.P[LV.id]||(S.P[LV.id]={feito:{},erros:{},abertos:{},missao:{},hist:{},pos:null});
 function nivel(xp){let n=NIVEIS_XP[0];for(const x of NIVEIS_XP)if(xp>=x[0])n=x;return n}
@@ -2792,7 +2796,7 @@ function ficha(){if(!S)return;const n=nivel(S.xp);
  const blocos=LEVELS.filter(lv=>S.P[lv.id]).map(lv=>{const p=S.P[lv.id];const rows=[];lv.fases.forEach((f,k)=>Object.entries(f.lugares).forEach(([id,l])=>rows.push(el('tr',{},el('td',{},`R${k+1} • ${l.nome}`),el('td',{},p.feito[id]?'✔':'—'),el('td',{class:'num'},String(p.erros[id]||0))))));
   return el('div',{class:'ficha'},el('h3',{class:'fh'},`${lv.nome} • ${lv.titulo}`),el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'LUGAR'),el('th',{},'OK'),el('th',{},'ERROS')),...rows)))});
  const conf=el('div',{class:'acoes',hidden:''},el('span',{class:'dica'},'Apagar todo o progresso deste computador?'),el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=true}},'Não'),el('button',{type:'button',on:{click:()=>{try{localStorage.removeItem(KEY)}catch(e){}S=null;LV=null;fechar();inicio()}}},'Sim, recomeçar'));
- cena(el('h2',{},'Ficha do Aventureiro'),el('div',{class:'fala'},`${S.nome} • ${n[1]} • ${S.xp} XP`),el('div',{class:'selos'},...(S.selos.length?S.selos.map(k=>el('span',{class:'selo'},SELOS[k][0])):[el('span',{class:'dica'},'Nenhum selo ainda.')])),...blocos,
+ cena(el('h2',{},'Ficha do Aventureiro'),el('div',{class:'fala'},`${S.nome} • ${n[1]} • ${S.xp} XP${S.cod?" • Código de salvamento: "+S.cod:""}`),el('div',{class:'selos'},...(S.selos.length?S.selos.map(k=>el('span',{class:'selo'},SELOS[k][0])):[el('span',{class:'dica'},'Nenhum selo ainda.')])),...blocos,
   NUVEM_URL?el('div',{class:'dica',id:'envStatus'},nuvemStatusTxt()||'O progresso vai sozinho para o professor.'):el('div',{class:'dica'},'Mostre esta ficha ao Mestre no fim da aula para registrar o seu XP.'),NUVEM_URL?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{class:'sec',type:'button',on:{click:ev=>{const b=ev.currentTarget;b.disabled=true;$('envStatus').textContent='Enviando…';nuvemEnviar(JSON.parse(JSON.stringify(S))).then(ok=>{b.disabled=false;$('envStatus').textContent=ok?nuvemStatusTxt():'Sem internet agora: tento de novo sozinho.'})}}},'Enviar agora ao professor')):null,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>meusCodigos(ficha)}},'🔑 Meus códigos'),el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=false}},'Recomeçar jogo'),el('button',{type:'button',on:{click:fechar}},'Fechar')),conf)}
 function entrarNivel(lv){montarNivel(lv);S.lv=lv.id;const p=PR();const pos=p.pos&&NOD[p.pos]?p.pos:primeiro(0);p.pos=pos;heroi={x:NOD[pos].x,y:NOD[pos].y};cam={x:Math.max(0,Math.min(W-VW,heroi.x-VW/2)),y:Math.max(0,Math.min(H-VH,heroi.y-VH/2))};visao=false;salvar();hud();
  if(!p.hist[0])historia(0,fechar);else fechar()}
@@ -2805,14 +2809,19 @@ function telaNiveis(){if(typeof sincCodigos==='function')sincCodigos();const car
       :el('div',{class:'acoes',style:'justify-content:flex-start;align-items:center'},inp,el('button',{class:'sec',type:'button',on:{click:lib2}},'Liberar'),fb))});
  cena(el('h2',{},'Escolha o nível'),el('div',{class:'dica'},'Cada nível é uma etapa da UC2 e tem 4 regiões que se encaixam num mapa só. Termine um nível para liberar o próximo, ou peça o código ao Mestre.'),el('div',{class:'nvs'},...cards),
   el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>meusCodigos(telaNiveis)}},'🔑 Meus códigos'),LV?el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'):null))}
-function outroPC(){const inp=el('input',{id:'nomeOutro',maxlength:'20',placeholder:'Seu nome (igual ao do outro dia)','aria-label':'Seu nome',autocomplete:'off'});const fb=el('div',{class:'fb no',hidden:''});
+function outroPC(){const inp=el('input',{id:'nomeOutro',maxlength:'20',placeholder:'Seu código (ex.: ANASOUZA-7K2P) ou seu nome','aria-label':'Seu código de salvamento',style:'text-transform:uppercase',autocomplete:'off'});const fb=el('div',{class:'fb no',hidden:''});
  const ir=async()=>{const v=inp.value.trim();if(!v){inp.focus();return}fb.hidden=false;fb.className='fb';fb.textContent='Buscando o seu progresso…';
   const loc=carregar();if(nuvemPendente(loc))await nuvemEnviar(loc);
   const r=await nuvemAluno(v);if(r.erro){fb.className='fb no';fb.textContent=r.erro;return}
   S=r.S;salvar();sfx('porta');const lv=LEVELS.find(l=>l.id===S.lv)||LEVELS[0];entrarNivel(lv);toast('Bem-vindo de volta, '+S.nome+'!')};
  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')ir()});
- cena(el('h2',{},'Continuar de outro computador'),el('div',{class:'fala'},'Digite o seu nome do jeito que você escreveu quando jogou. O jogo busca o seu progresso na planilha do professor.'),inp,fb,
+ cena(el('h2',{},'Continuar com o meu código'),el('div',{class:'fala'},'Digite o código que apareceu quando você clicou em 💾 Salvar (ele também está na Ficha). O jogo busca o seu progresso na planilha do professor. Quem ainda não tem código pode digitar o nome do jeito que escreveu quando jogou.'),inp,fb,
   el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:inicio}},'Voltar'),el('button',{type:'button',on:{click:ir}},'Buscar ▶')));setTimeout(()=>inp.focus(),50)}
+async function telaSalvar(){if(!S)return;codSalvo();salvar();const st=el('div',{class:'fb'},'Salvando na planilha do professor…');
+ cena(el('h2',{},'💾 Jogo salvo'),el('div',{class:'fala'},'Anote o seu código. Com ele você continua de onde parou em qualquer computador ou celular: na tela inicial, clique em "🔑 Continuar com meu código".'),
+  el('div',{style:'text-align:center;font-size:2em;letter-spacing:3px;padding:12px;border:3px dashed var(--ouro);margin:6px 0;user-select:all'},el('b',{},S.cod)),st,
+  el('div',{class:'dica'},'Dica: tire um print desta tela ou anote no caderno. O código também aparece na Ficha.'),el('div',{class:'acoes'},el('button',{type:'button',on:{click:fechar}},'Continuar jogando ▶')));
+ const ok=NUVEM_URL?await nuvemEnviar(JSON.parse(JSON.stringify(S))):false;st.className='fb '+(ok?'ok':'no');st.textContent=ok?'✔ Salvo na planilha do professor às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.':'Sem internet agora. O progresso ficou salvo neste aparelho e será enviado sozinho quando a internet voltar.'}
 function inicio(){const salvo=carregar();let av=0;
  const avs=el('div',{class:'avs',role:'group','aria-label':'Escolha o herói'},...AVS.map((p,i)=>{const c=el('canvas',{width:8,height:11});spr(c.getContext('2d'),HERO,p,0,0);return el('button',{type:'button','aria-pressed':i===0?'true':'false','aria-label':'Herói '+(i+1),on:{click:()=>{av=i;avs.querySelectorAll('button').forEach((x,j)=>x.setAttribute('aria-pressed',j===i))}}},c)}));
  const nome=el('input',{id:'nomeHeroi',maxlength:'20',placeholder:'Seu nome','aria-label':'Seu nome',autocomplete:'off'});
@@ -2821,10 +2830,10 @@ function inicio(){const salvo=carregar();let av=0;
  cena(el('h2',{class:'tit-inicio'},'REINO DOS DADOS'),
   salvo&&salvo.nome?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{type:'button',on:{click:()=>{S=salvo;const lv=LEVELS.find(l=>l.id===S.lv)||LEVELS[0];entrarNivel(lv);toast('Bem-vindo de volta, '+S.nome+'!')}}},`Continuar como ${salvo.nome} ▶`)):null,
   el('div',{class:'fala'},'O Bug do Esquecimento apagou os dados do reino. Atravesse 9 níveis, do Fácil ao Mestre, ouça as histórias, estude os pergaminhos, vença os monstros e construa o banco de dados da Barbearia Navalha de Ouro.'),
-  el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},NUVEM_URL?el('button',{class:'sec',type:'button',on:{click:outroPC}},'Já joguei em outro computador'):null,el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')),
+  el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},NUVEM_URL?el('button',{class:'sec',type:'button',on:{click:outroPC}},'🔑 Continuar com meu código'):null,el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')),
   el('div',{class:'acoes',style:'justify-content:space-between;align-items:center'},el('button',{class:'sec mini',type:'button',title:'Mostrar o QR code em tela cheia para a turma',on:{click:telaQR}},el('img',{src:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(QR_SVG),alt:'QR code do link do jogo',width:'56',height:'56',style:'vertical-align:middle;margin-right:8px;image-rendering:pixelated'}),'📱 Jogar no celular'),el('button',{class:'sec mini',type:'button',on:{click:areaProfessor}},'Área do Professor 🔒')));setTimeout(()=>nome.focus(),50)}
 function telaQR(){cena(el('h2',{},'📱 Acesse o Reino dos Dados'),el('div',{class:'fala'},'Aponte a câmera do celular para o QR code ou digite o endereço:'),el('div',{style:'display:flex;justify-content:center;padding:8px'},el('img',{src:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(QR_SVG),alt:'QR code: '+QR_URL,style:'width:min(340px,70vw);height:auto;image-rendering:pixelated;border:6px solid #fff'})),el('div',{class:'fala',style:'text-align:center;font-size:1.1em'},el('b',{},QR_URL.replace('https://',''))),el('div',{class:'dica'},'O progresso fica salvo no aparelho e vai para o professor. Em outro aparelho, use "Já joguei em outro computador".'),el('div',{class:'acoes'},el('button',{type:'button',on:{click:inicio}},'Voltar')))}
-$('btnFicha').addEventListener('click',ficha);$('btnCod').addEventListener('click',()=>S&&meusCodigos());$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
+$('btnFicha').addEventListener('click',ficha);$('btnSalvar').addEventListener('click',()=>S&&telaSalvar());$('btnCod').addEventListener('click',()=>S&&meusCodigos());$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
 requestAnimationFrame(desenha);inicio();
 // ===================== ESPAÇOS DE ESCRITA, PESQUISA E SQL =====================
 // texto: resposta escrita (mínimo de palavras); pesquisa: resposta + fonte; sql: o código RODA num banco
@@ -2946,8 +2955,8 @@ function alunosProf(){const m=new Map();for(const it of profLista||[])m.set(norm
  const loc=carregar();if(loc&&loc.nome&&!m.has(normNome(loc.nome)))m.set(normNome(loc.nome),{...loc,_data:'só neste PC',_ts:loc.ts||0});
  return[...m.values()].sort((a,b)=>a.nome.localeCompare(b.nome))}
 function csvProf(AL){const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
- const cab=['Aluno','Salvo em','XP','Nível',...LEVELS.map(l=>l.nome),...[1,2,3,4,5,6].map(i=>'Ind '+i),'Atenção',...BAT.map(b=>'Erros '+b.lvn+' '+b.nome)];
- const rows=AL.map(x=>{const a=analisar(x);return[x.nome,x._data||'',x.xp||0,nivel(x.xp||0)[1],...LEVELS.map(l=>a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:''),...[1,2,3,4,5,6].map(i=>a.sug[i]),a.atencao.map(z=>z.nome).join('; '),
+ const cab=['Aluno','Código','Salvo em','XP','Nível',...LEVELS.map(l=>l.nome),...[1,2,3,4,5,6].map(i=>'Ind '+i),'Atenção',...BAT.map(b=>'Erros '+b.lvn+' '+b.nome)];
+ const rows=AL.map(x=>{const a=analisar(x);return[x.nome,x.cod||'',x._data||'',x.xp||0,nivel(x.xp||0)[1],...LEVELS.map(l=>a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:''),...[1,2,3,4,5,6].map(i=>a.sug[i]),a.atencao.map(z=>z.nome).join('; '),
   ...BAT.map(b=>{const p=(x.P||{})[b.lv];if(!p)return'';return p.feito[b.id]?((p.erros||{})[b.id]||0):'não fez'})]});
  baixarArq('reino-dos-dados_turma.csv','﻿'+[cab,...rows].map(r=>r.map(q).join(';')).join('\r\n'),'text/csv')}
 function areaProfessor(){if(profAberto)return painelProf();
@@ -2962,12 +2971,12 @@ function painelProf(buscar){const AL=alunosProf();const saida=el('div',{});
   profLista=r.lista;try{localStorage.setItem(PROF_KEY,JSON.stringify(profLista))}catch(e){}profMsg=`Planilha: ${r.lista.length} aluno(s), atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`;painelProf()})};
  if(buscar&&NUVEM_URL)setTimeout(atualizar,50);
  if(AL.length){
-  const linhas=AL.map(x=>{const a=analisar(x);return `<tr><td>${escH(x.nome)}</td><td>${escH(x._data||'')}</td><td class="num">${x.xp||0}</td><td>${escH(nivel(x.xp||0)[1])}</td>${LEVELS.map(l=>`<td>${a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:'—'}</td>`).join('')}${[1,2,3,4,5,6].map(i=>`<td><span class="tag" style="background:${corSug[a.sug[i]]}">${a.sug[i]}</span></td>`).join('')}<td>${a.atencao.map(z=>escH(z.nome)).join(', ')||'—'}</td></tr>`}).join('');
+  const linhas=AL.map(x=>{const a=analisar(x);return `<tr><td>${escH(x.nome)}</td><td><b>${escH(x.cod||'—')}</b></td><td>${escH(x._data||'')}</td><td class="num">${x.xp||0}</td><td>${escH(nivel(x.xp||0)[1])}</td>${LEVELS.map(l=>`<td>${a.niveis[l.id]?a.niveis[l.id].f+'/'+a.niveis[l.id].t:'—'}</td>`).join('')}${[1,2,3,4,5,6].map(i=>`<td><span class="tag" style="background:${corSug[a.sug[i]]}">${a.sug[i]}</span></td>`).join('')}<td>${a.atencao.map(z=>escH(z.nome)).join(', ')||'—'}</td></tr>`}).join('');
   const cel=(t,c)=>`<td style="background:${c};text-align:center">${t}</td>`;
   const calor=AL.map(x=>`<tr><td>${escH(x.nome)}</td>${BAT.map(b=>{const p=(x.P||{})[b.lv];if(!p)return cel('','#1a1533');const e=(p.erros||{})[b.id]||0,f=p.feito&&p.feito[b.id];return cel(f?(e>=4?'4+':e):(e?e:'·'),!f?'#3d3550':e===0?'#2d6a4f':e<=1?'#55a630':e<=3?'#e09f3e':'#9e2a2b')}).join('')}</tr>`).join('');
   const soma=BAT.map(b=>AL.reduce((t,x)=>t+((((x.P||{})[b.lv]||{}).erros||{})[b.id]||0),0));
   const top=BAT.map((b,i)=>[b,soma[i]]).filter(z=>z[1]>0).sort((p,q)=>q[1]-p[1]).slice(0,6);
-  saida.innerHTML=`<h3 class="ph">TURMA (${AL.length} alunos)</h3><div class="tbw"><table class="tb"><tr><th>Aluno</th><th>Salvo em</th><th>XP</th><th>Nível</th>${LEVELS.map(l=>`<th>${escH(l.nome)}</th>`).join('')}${[1,2,3,4,5,6].map(i=>`<th title="${escH(IND_TXT[i])}">Ind. ${i}</th>`).join('')}<th>Atenção</th></tr>${linhas}</table></div>
+  saida.innerHTML=`<h3 class="ph">TURMA (${AL.length} alunos)</h3><div class="tbw"><table class="tb"><tr><th>Aluno</th><th>Código</th><th>Salvo em</th><th>XP</th><th>Nível</th>${LEVELS.map(l=>`<th>${escH(l.nome)}</th>`).join('')}${[1,2,3,4,5,6].map(i=>`<th title="${escH(IND_TXT[i])}">Ind. ${i}</th>`).join('')}<th>Atenção</th></tr>${linhas}</table></div>
   <div class="dica">Ind. 1 a 6 = sugestão A / PA / NA a partir do jogo (só dos níveis que o aluno começou; — = ainda não começou). A menção é sua: confirme com a observação em sala.</div>
   ${respostasHTML(AL)}
   <h3 class="ph">BATALHAS QUE MAIS DERRUBARAM A TURMA</h3>${top.length?'<ol>'+top.map(([b,n])=>`<li>${escH(b.lvn)} • ${escH(b.nome)}: ${n} erro(s) somados</li>`).join('')+'</ol>':'<p class="dica">Nenhum erro registrado.</p>'}
