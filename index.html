@@ -145,6 +145,7 @@ pre.resp{white-space:pre-wrap;font-family:var(--f-txt);font-size:18px;margin:4px
     <button class="sec" id="btnVisao" type="button" aria-pressed="false">Mapa completo</button>
     <button class="sec" id="btnNiveis" type="button">Níveis</button>
     <button class="sec" id="btnFicha" type="button">Ficha</button>
+    <button class="sec" id="btnCod" type="button">🔑 Meus códigos</button>
     <button class="sec som" id="btnFx" type="button" aria-pressed="true">Efeitos: sim</button>
     <button class="sec som" id="btnMus" type="button" aria-pressed="true">Música: sim</button>
   </header>
@@ -1275,7 +1276,7 @@ function hud(){if(!S)return;$('hNome').textContent=S.nome;$('hVida').textContent
  const n=nivel(S.xp);$('hNivel').textContent=n[1];$('hXp').textContent=S.xp;const pn=proxNivel(S.xp);$('hXpBar').style.width=pn?((S.xp-n[0])/(pn-n[0])*100)+'%':'100%';
  $('hDif').textContent=LV?LV.nome.toUpperCase():'—';
  $('hSelos').replaceChildren(...S.selos.map(k=>el('span',{class:'selo',title:SELOS[k][1]},SELOS[k][0])));if(LV)diario()}
-function diario(){const L=$('lista');L.replaceChildren();$('dTit').textContent=LV.titulo.toUpperCase();
+function diario(){if(typeof sincCodigos==='function')sincCodigos();const L=$('lista');L.replaceChildren();$('dTit').textContent=LV.titulo.toUpperCase();
  LV.fases.forEach((f,k)=>{const lib=faseLiberada(k);L.append(el('div',{class:'reg'+(lib?'':' trava')},`Região ${k+1} • ${f.nome}`,lib&&PR().hist[k]?el('button',{class:'mini',type:'button',on:{click:()=>historia(k,fechar)}},'história'):null));
   if(!lib){L.append(el('div',{class:'dica'},'Região coberta pela névoa.'));return}
   for(const id of Object.keys(f.lugares)){const n=NOD[id],st=estado(id);const b=el('button',{class:'lugar '+st,type:'button',on:{click:()=>viajar(id)}},n.nome+(n.extra?' (opcional)':''),el('small',{},st==='feito'?'concluído':st==='disp'?'disponível':'bloqueado'));if(st==='trava')b.disabled=true;L.append(b)}})}
@@ -1441,7 +1442,7 @@ function inicio(){const salvo=carregar();let av=0;
   el('div',{class:'fala'},'O Bug do Esquecimento apagou os dados do reino. Atravesse 4 níveis (Fácil, Médio, Difícil e Expert), ouça as histórias, estude os pergaminhos, vença os monstros e construa o banco de dados da Barbearia Navalha de Ouro.'),
   el('div',{class:'dica'},'Escolha seu herói:'),avs,nome,el('div',{class:'acoes'},NUVEM_URL?el('button',{class:'sec',type:'button',on:{click:outroPC}},'Já joguei em outro computador'):null,el('button',{type:'button',on:{click:comecar}},'Nova aventura ▶')),
   el('div',{class:'acoes',style:'justify-content:flex-end'},el('button',{class:'sec mini',type:'button',on:{click:areaProfessor}},'Área do Professor 🔒')));setTimeout(()=>nome.focus(),50)}
-$('btnFicha').addEventListener('click',ficha);$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
+$('btnFicha').addEventListener('click',ficha);$('btnCod').addEventListener('click',()=>S&&meusCodigos());$('btnFx').addEventListener('click',()=>{SOM.fx=!SOM.fx;somSalvar();botoesSom();sfx('clique')});$('btnMus').addEventListener('click',()=>{SOM.mus=!SOM.mus;somSalvar();botoesSom();musica()});botoesSom();$('btnNiveis').addEventListener('click',()=>S&&telaNiveis());$('btnVisao').addEventListener('click',()=>LV&&alternarVisao());
 requestAnimationFrame(desenha);inicio();
 // ===================== ESPAÇOS DE ESCRITA, PESQUISA E SQL =====================
 // texto: resposta escrita (mínimo de palavras); pesquisa: resposta + fonte; sql: o código RODA num banco
@@ -1527,7 +1528,13 @@ function minhasRespostas(id,M){const p=PR();const r=(p.resp||{})[id]||{};const i
 // ---------- códigos liberados para o aluno (atividades em casa) ----------
 function liberarCodigo(cod,onde){if(!S||!cod)return cod;S.codigos=S.codigos||{};if(!S.codigos[cod]){S.codigos[cod]={onde,ts:Date.now()};salvar();setTimeout(()=>toast('🔑 Código liberado: '+cod),600)}return cod}
 function caixaCodigo(cod){return el('div',{class:'fb ok codlib'},'🔑 Código liberado para você: ',el('b',{},cod),el('span',{class:'dica'},'  (fica guardado em "Meus códigos")'))}
-function meusCodigos(volta){const c=Object.entries((S&&S.codigos)||{}).sort((a,b)=>a[1].ts-b[1].ts);
+// libera (sem alarde) todos os códigos cujo caminho já foi cumprido, inclusive de progresso antigo
+function sincCodigos(){if(!S)return;S.codigos=S.codigos||{};let novo=false;const add=(c,o)=>{if(c&&!S.codigos[c]){S.codigos[c]={onde:o,ts:Date.now()};novo=true}};
+ try{if(LV)for(const[id,n]of Object.entries(NOD))if(n.codigo&&estado(id)!=='trava')add(n.codigo,LV.nome+' • '+n.nome);
+  LEVELS.forEach((lv,i)=>{if(i>0&&lv.codigo&&nivelCompleto(lv.antes?LEVELS.find(x=>x.id===lv.antes):LEVELS[i-1]))add(lv.codigo,'Tela Níveis • libera o nível '+lv.nome)});
+  LEVELS.forEach(lv=>{const p=S.P[lv.id];if(!p)return;lv.fases.forEach(f=>Object.entries(f.lugares).forEach(([id,n])=>{if(n.codigo&&p.feito[id])add(n.codigo,lv.nome+' • '+n.nome)}))})}catch(e){}
+ if(novo)salvar()}
+function meusCodigos(volta){sincCodigos();const c=Object.entries((S&&S.codigos)||{}).sort((a,b)=>a[1].ts-b[1].ts);
  cena(el('h2',{},'🔑 Meus códigos'),el('div',{class:'fala'},'Os códigos que você já liberou. Um código novo aparece sozinho quando você termina tudo o que vem antes do portão, do chefão ou do próximo nível.'),
   c.length?el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'Código'),el('th',{},'Onde usar')),...c.map(([k,v])=>el('tr',{},el('td',{},el('b',{},k)),el('td',{},v.onde))))):el('div',{class:'dica'},'Nenhum código liberado ainda.'),
   el('div',{class:'acoes'},el('button',{type:'button',on:{click:volta||fechar}},'Voltar')))}
