@@ -2117,6 +2117,344 @@ MISSOES.lab_pet={regras:REGRAS_PET,fim:'A Clínica Pet está no ar! Agora, o Gol
 
 // ---------------------------------------------------------------- chefões jogáveis em casa
 Object.values(LEVELS).forEach(lv=>lv.fases.forEach(f=>Object.values(f.lugares).forEach(n=>{if(n.tipo==='chefao')n.fala=n.fala.replace(/ ?Enfrentem em equipe\.?/,'').replace(/ ?O Chefão se enfrenta em EQUIPE, no quadro\.?/,'').replace(/ ?Peça o código ao Mestre\.?/,'').replace(/ ?se enfrenta em equipe\.?/,' acordou.').trim()+' Enfrente sozinho ou com a turma: o código aparece quando você termina tudo antes dele.'})));
+// ===================== BANCO AMPLIADO • parte 4 (15 por batalha): Fácil e Médio =====================
+addQ('vila',[
+ ['O programa da UC1 guardava a lista de clientes numa variável. Ao fechar o programa...','A lista some','A lista vai para o disco sozinha','A lista vira planilha','A lista fica na impressora','Variável vive na memória do programa.'],
+ ['O que é "salvar" um dado?','Gravar no disco para usar depois','Mostrar na tela','Apagar da memória','Imprimir','Salvar = persistir.'],
+ ['O celular desligou e as fotos continuaram lá. Isso é...','Persistência','Volatilidade','Normalização','Criptografia','Ficaram no armazenamento.'],
+ ['Qual é o problema de cada atendente ter o seu próprio arquivo de clientes?','Dados diferentes e desencontrados em cada computador','Nenhum','Fica mais seguro','Fica mais organizado','Uma fonte única evita confusão.'],
+ ['Por que um banco de dados é melhor que vários arquivos soltos?','Centraliza, organiza, aplica regras e controla o acesso','É mais colorido','Não precisa de computador','Não tem regras','O SGBD cuida de tudo isso.']]);
+addQ('mercado',[
+ ['"Corte" sozinho é...','Um dado','Uma informação completa','Um relatório','Um banco','Precisa de contexto.'],
+ ['"O corte é o serviço mais vendido em sábados" é...','Informação','Dado bruto','Ruído','Erro','Vem de dados organizados e comparados.'],
+ ['Para virar informação, o dado precisa estar...','Organizado e relacionado com outros dados','Escondido','Duplicado','Apagado','Organização gera significado.'],
+ ['Quem mais se beneficia das informações do banco da barbearia?','O dono, para decidir (preços, horários, promoções)','Ninguém','Só o técnico','O concorrente','Informação apoia decisão.'],
+ ['Qual destes NÃO é um exemplo de banco de dados no dia a dia?','Uma folha de papel em branco','O cadastro de alunos do Senac','Os contatos do celular','O estoque de um mercado','Banco guarda dados organizados.']]);
+addQ('planilha',[
+ ['O PROCV da planilha se parece com qual recurso do banco?','JOIN pela chave estrangeira','DELETE','Backup','CREATE DATABASE','Busca o dado na outra tabela pelo ID.'],
+ ['A planilha cresceu para 50 mil linhas e ficou lenta. O banco ajuda com...','Índices e consultas otimizadas','Cores','Gráficos','Fontes maiores','O SGBD foi feito para volume.'],
+ ['Na planilha, qualquer um pode apagar uma aba inteira sem querer. No banco...','Permissões impedem quem não deve apagar','Também','É pior','Não existe aba','Controle de acesso.'],
+ ['Cada aba da planilha organizada deve ter...','Uma coluna ID que não repete','Fórmulas aleatórias','Células mescladas','Cores diferentes','O ID vira chave primária.'],
+ ['Qual problema da planilha o banco resolve com o tipo da coluna?','Digitar texto onde deveria ser número ou data','Cor da célula','Tamanho da fonte','Nome da aba','Tipos validam os dados.']]);
+addQ('torre',[
+ ['Qual comando cria uma tabela?','CREATE TABLE','INSERT','SELECT','UPDATE','CREATE é DDL.'],
+ ['Qual comando consulta dados?','SELECT','CREATE','DROP','ALTER','SELECT é consulta.'],
+ ['O SGBD controla quem pode ver e mudar os dados. Isso é...','Segurança e controle de acesso','Normalização','Backup','Cardinalidade','Usuários e permissões.'],
+ ['Integridade dos dados significa...','Dados corretos e coerentes com as regras','Dados bonitos','Dados muitos','Dados apagados','PK, FK e restrições garantem.'],
+ ['Qual destes é um SGBD gratuito e muito usado em sites?','MySQL','Photoshop','Word','Chrome','PostgreSQL também.']]);
+addQ('floresta',[
+ ['Registro é o mesmo que...','Linha','Coluna','Tabela','Banco','Um registro por cliente.'],
+ ['Campo é o mesmo que...','Coluna','Linha','Banco','Backup','Cada característica.'],
+ ['Qual tipo para "aceita receber promoções: sim/não"?','BOOLEAN','DATE','NUMERIC','TIME','Verdadeiro ou falso.'],
+ ['Qual tipo para a quantidade de cortes no mês?','INTEGER','VARCHAR(2)','DATE','BOOLEAN','Número inteiro.'],
+ ['Por que escolher o tipo certo para cada coluna?','O banco valida os dados e permite cálculos e filtros corretos','Para ficar bonito','Não importa','Para gastar mais espaço','Tipo é regra.']]);
+addQ('biblioteca',[
+ ['A coluna "Tamanho" do dicionário serve para...','Definir o limite do campo, como VARCHAR(80)','Definir a cor','Definir a senha','Nada','Tamanho máximo.'],
+ ['Qual é a descrição melhor para "nascimento"?','"Data de nascimento do cliente, usada para promoções de aniversário"','"data"','"nasc"','"campo"','Clara e com finalidade.'],
+ ['O dicionário de dados deve acompanhar...','O MER e o script de criação do banco','Só o backup','A senha','Nada','É parte da documentação.'],
+ ['O campo "observacao" do cliente é obrigatório?','Não: é opcional (pode ficar vazio)','Sim, sempre','É chave primária','É FK','Nem tudo é obrigatório.'],
+ ['Tipo e tamanho para e-mail:','VARCHAR(100)','INTEGER','DATE','CHAR(2)','Texto de tamanho variável.']]);
+addQ('templo',[
+ ['Um amigo pede o telefone de uma cliente "só para conversar". Você...','Não passa: é dado pessoal e sigiloso','Passa','Passa se ela for bonita','Passa por e-mail','Sigilo sempre.'],
+ ['O que é consentimento na LGPD?','O titular autoriza o uso do dado para uma finalidade','Um tipo de senha','Um backup','Um SGBD','Concordância informada.'],
+ ['Sair do computador do caixa sem bloquear a tela é...','Risco: outra pessoa pode acessar os dados','Normal','Boa prática','Economia de energia','Bloqueie sempre.'],
+ ['Quem é o "titular" dos dados?','A pessoa a quem os dados se referem (o cliente)','O dono da barbearia','O programador','O SGBD','O dado é da pessoa.'],
+ ['Postar print do sistema com dados de clientes nas redes é...','Vazamento de dados pessoais','Divulgação legal','Marketing','Backup','Nunca exponha dados.']]);
+addQ('caverna',[
+ ['O CPF pode ser chave primária?','Pode (é único), mas é dado pessoal e um id costuma ser melhor','Nunca','Só com vírgula','Só no Excel','Chave substituta (id) é comum.'],
+ ['Chave composta é...','Uma chave formada por duas ou mais colunas juntas','Uma chave com senha','Uma chave estrangeira','Uma chave nula','Ex.: (agendamento_id, servico_id).'],
+ ['A FK precisa ter o mesmo tipo da PK que ela referencia?','Sim','Não','Só às vezes','Só se for texto','INTEGER aponta para INTEGER.'],
+ ['Uma tabela pode ter quantas chaves primárias?','Uma (que pode ser composta)','Várias','Nenhuma sempre','Dez','Uma PK por tabela.'],
+ ['Uma tabela pode ter várias chaves estrangeiras?','Sim','Não','Só uma','Só se for pequena','agendamento tem cliente_id e barbeiro_id.']]);
+addQ('ponte',[
+ ['A elipse no MER de Chen representa...','Atributo','Entidade','Relacionamento','Tabela','Característica.'],
+ ['"Um barbeiro faz vários agendamentos; cada agendamento tem um barbeiro." Cardinalidade?','1:N','N:N','1:1','0:0','Um para muitos.'],
+ ['"Um produto aparece em vários pedidos e um pedido tem vários produtos." Cardinalidade?','N:N','1:N','1:1','Nenhuma','Muitos para muitos.'],
+ ['O MER é um modelo...','Conceitual','Físico','De backup','De senha','Ideias, antes do SQL.'],
+ ['O relacionamento N:N entre agendamento e serviço vira a tabela...','agendamento_servico','servico_agendado_texto','cliente','barbeiro','Tabela associativa.']]);
+
+addQ('m_1fn',[
+ ['"Hobbies: futebol, música" num campo só quebra a...','1FN','2FN','3FN','Nenhuma','Vários valores numa célula.'],
+ ['A solução para hobbies múltiplos é...','Uma tabela cliente_hobby (cliente_id, hobby)','Uma coluna maior','10 colunas hobby','Apagar','Multivalorado vira tabela.'],
+ ['Valor atômico é...','Um valor que não se divide para o uso do sistema','Um valor nuclear','Um valor nulo','Uma fórmula','Um valor por campo.'],
+ ['Uma planilha com células mescladas para o mesmo cliente está na 1FN?','Não: tem grupos repetidos','Sim','Só no Excel','Depende da cor','Uma linha por registro.'],
+ ['Qual destas quebra a 1FN?','pedido(id, "produtos: arroz, feijão")','pedido(id, data)','produto(id, nome)','cliente(id, nome)','Lista dentro do campo.']]);
+addQ('m_anom',[
+ ['Anomalia de atualização acontece quando...','O mesmo dado está repetido e não é mudado em todos os lugares','Não há dados','O banco é novo','Há backup','Dado repetido desatualiza.'],
+ ['Anomalia de inserção acontece quando...','Não dá para cadastrar um dado sem inventar outro','O INSERT é rápido','A tabela tem PK','Há índice','Ex.: barbeiro sem agendamento.'],
+ ['Anomalia de exclusão acontece quando...','Apagar um dado apaga junto outro que deveria ficar','Apaga só o certo','Há FK','Não há dados','Perda acidental.'],
+ ['A melhor prevenção contra anomalias é...','Normalizar (cada assunto na sua tabela)','Fazer mais planilhas','Repetir mais','Apagar tudo','Sem redundância.'],
+ ['Planilha "atendimentos" com nome, telefone e serviço em cada linha tende a ter...','As três anomalias','Nenhuma','Só backup','Índices','Tudo junto, tudo repetido.']]);
+addQ('m_2fn',[
+ ['Em nota_aluno(aluno_id, disciplina_id, nota, nome_disciplina), quem quebra a 2FN?','nome_disciplina','nota','aluno_id','disciplina_id','Depende só de disciplina_id.'],
+ ['nota em nota_aluno(aluno_id, disciplina_id, nota) depende...','Do aluno E da disciplina (chave inteira)','Só do aluno','Só da disciplina','De nada','Por isso fica.'],
+ ['Para estar na 2FN, a tabela precisa antes estar na...','1FN','3FN','FNBC','Nenhuma','Uma depois da outra.'],
+ ['preco_cobrado em agendamento_servico depende...','Do agendamento e do serviço juntos','Só do serviço','Só do cliente','De nada','É o valor daquele serviço naquele atendimento.'],
+ ['Corrigir a 2FN evita...','Repetir o nome do serviço em cada linha associativa','Ter chave primária','Ter FK','Ter dados','Menos redundância.']]);
+addQ('m_3fn',[
+ ['Em cliente(id, nome, cidade_id, nome_cidade), quem quebra a 3FN?','nome_cidade (depende de cidade_id)','nome','id','cidade_id','Vai para a tabela cidade.'],
+ ['Em produto(id, nome, categoria_id, nome_categoria) a correção é...','Criar a tabela categoria e deixar só categoria_id em produto','Repetir mais','Apagar categoria','Não fazer nada','Remove a dependência transitiva.'],
+ ['Uma tabela na 3FN também está na...','1FN e 2FN','Só 1FN','Nenhuma','4FN obrigatoriamente','Formas são cumulativas.'],
+ ['Idade guardada junto com a data de nascimento cria...','Dependência de outro campo (idade vem do nascimento)','PK','FK','Índice','Derivado: calcule.'],
+ ['O objetivo da 3FN é...','Cada campo depender só da chave','Ter três tabelas','Ter três FKs','Ter três colunas','"A chave, toda a chave e nada além da chave".']]);
+addQ('m_aplic',[
+ ['Uma tabela de relatório anual com totais repetidos de propósito é...','Desnormalização consciente','Erro grave sempre','1FN','Backup','Feita por desempenho, documentada.'],
+ ['O valor do endereço de entrega guardado no pedido (mesmo existindo no cliente) é...','Desnormalização para guardar o histórico daquela entrega','Erro','Anomalia','Chave','O cliente pode mudar de endereço.'],
+ ['Quem decide desnormalizar deve...','Medir o ganho e documentar o motivo','Fazer escondido','Apagar o dicionário','Desligar as FKs','Decisão consciente.'],
+ ['Normalização é mais importante em sistemas que...','Gravam e alteram dados o tempo todo (cadastros, vendas)','Nunca mudam','Não têm dados','São planilhas','Evita anomalias nas alterações.'],
+ ['Sistemas de relatório (BI) muitas vezes...','Aceitam dados repetidos para ler mais rápido','Proíbem JOIN','Não usam banco','Só usam 5FN','Leitura pesada pede outro equilíbrio.']]);
+addQ('m_req',[
+ ['Brainstorming é...','Reunião para gerar ideias e levantar necessidades','Um SGBD','Um backup','Um tipo de chave','Técnica de levantamento em grupo.'],
+ ['Uma boa regra de negócio responde...','Quem, o quê, quantos, pode repetir, muda com o tempo','Qual SGBD usar','Qual a cor da tela','Nada','Perguntas que viram estrutura.'],
+ ['"O cliente quer pagar com PIX" vira no banco...','Um campo forma_pagamento ou uma tabela de formas de pagamento','Nada','Uma senha','Um índice','Requisito vira estrutura.'],
+ ['Requisito mal levantado causa...','Retrabalho e banco errado','Mais lucro','Sistema perfeito','Nada','Custo alto de corrigir depois.'],
+ ['Qual pergunta revela um requisito de histórico?','"Você precisa saber os preços antigos?"','"Gosta de azul?"','"Usa Windows?"','"Tem internet?"','"Muda com o tempo?"']]);
+addQ('m_dic',[
+ ['O que significa "Obrigatório: sim" no dicionário?','O campo vira NOT NULL','O campo vira PK','O campo é opcional','O campo é calculado','Não pode ficar vazio.'],
+ ['O domínio de um campo é...','O conjunto de valores aceitos','O site do sistema','O dono do banco','A tabela','Ex.: marcado, atendido, cancelado.'],
+ ['Qual destas NÃO costuma ser coluna do dicionário?','Senha do banco','Nome do campo','Tipo','Descrição','Senha não vai em documento.'],
+ ['O dicionário ajuda o programador iniciante porque...','Ele sabe o significado e as regras de cada campo sem adivinhar','Substitui o SQL','Faz backup','Cria telas','É o manual dos dados.'],
+ ['Se o tipo no dicionário é DATE e o script usa VARCHAR, o que fazer?','Corrigir para ficarem iguais (e conferir com as regras)','Ignorar','Apagar o dicionário','Usar os dois','Documento e banco devem bater.']]);
+addQ('m_ferr',[
+ ['O dbdiagram.io exporta...','O script SQL para o SGBD escolhido','Fotos','Vídeos','Planilhas de notas','Diagrama em texto → SQL.'],
+ ['O ERD Tool do pgAdmin...','Desenha e gera SQL ligado ao banco PostgreSQL','Edita imagens','Faz backup automático','Cria usuários','Ferramenta de diagrama do pgAdmin.'],
+ ['O modelo FÍSICO é...','O script SQL do SGBD escolhido','O MER','O papel','A entrevista','Pronto para rodar.'],
+ ['O modelo LÓGICO mostra...','Tabelas, colunas, PK, FK e tipos','Só entidades e losangos','Só o SQL','Telas do sistema','Ponte entre o MER e o SQL.'],
+ ['Desenhar o MER numa ferramenta e guardar no Git ajuda a...','Ter a versão atual e o histórico do modelo','Perder o arquivo','Esconder do time','Nada','Documento vivo.']]);
+// ===================== BANCO AMPLIADO • parte 5 (15 por batalha): Difícil e Expert =====================
+addQ('d_porto',[
+ ['O pgAdmin é...','Uma ferramenta gráfica para administrar o PostgreSQL','Um banco de dados','Uma linguagem','Um antivírus','Cliente gráfico oficial.'],
+ ['Para acessar um banco em outro computador, o host deve ser...','O endereço (IP ou nome) do servidor','localhost sempre','O nome da tabela','A senha','localhost é a própria máquina.'],
+ ['O PostgreSQL roda no Windows, no Linux e no Mac?','Sim','Só no Linux','Só no Windows','Só na nuvem','Multiplataforma.'],
+ ['O que é uma instância (cluster) do PostgreSQL?','O servidor em execução que guarda vários bancos','Uma tabela','Um usuário','Um backup','O "prédio" dos bancos.'],
+ ['Qual destes NÃO é cliente do PostgreSQL?','Paint','DBeaver','psql','pgAdmin','Paint edita imagens.']]);
+addQ('d_farol',[
+ ['Listar os bancos no psql:','\\l','\\x','\\q','\\d+cliente','\\l = list.'],
+ ['Sair do psql:','\\q','exit()','quit;','DROP','\\q = quit.'],
+ ['Listar as tabelas do banco no psql:','\\dt','\\l','\\q','\\c','\\dt = describe tables.'],
+ ['DDL é a sigla de...','Data Definition Language','Data Delete List','Database Download Link','Dados Duplicados Limpos','Define a estrutura.'],
+ ['Para criar um banco, o usuário precisa...','Ter permissão de criar banco (CREATEDB) ou ser administrador','Ser cliente da barbearia','Ter backup','Nada','Permissões também valem para DDL.']]);
+addQ('d_forja',[
+ ['Qual é o erro? CREATE TABLE cliente (id SERIAL PRIMARY KEY nome VARCHAR(80));','Falta a vírgula entre as colunas','Falta DROP','SERIAL não existe','Nome é proibido','Colunas separadas por vírgula.'],
+ ['IF NOT EXISTS em CREATE TABLE IF NOT EXISTS cliente serve para...','Não dar erro se a tabela já existir','Apagar a tabela','Criar backup','Criar duas tabelas','Script que pode rodar de novo.'],
+ ['DEFAULT CURRENT_DATE numa coluna data faz...','Preencher com a data de hoje se não informar','Apagar a data','Bloquear a data','Nada','Valor padrão automático.'],
+ ['Nome de tabela recomendado:','agendamento_servico','Agendamento Serviço!','tabela1','AS','Minúsculas e underline.'],
+ ['O script de criação deve ser salvo...','Num arquivo .sql versionado no Git','Só na memória','Num print','Num papel','Para recriar o banco quando precisar.']]);
+addQ('d_tipos',[
+ ['NUMERIC(6,2) aceita no máximo...','9999,99','999999,99','99,99','Qualquer valor','6 dígitos, 2 depois da vírgula.'],
+ ['VARCHAR(80) com o texto "Ana" ocupa...','Só o necessário para "Ana" (tamanho variável)','Sempre 80 caracteres','Nada','80 linhas','CHAR é que completa.'],
+ ['SERIAL é, por baixo, um...','INTEGER com sequência automática','Texto','Data','Booleano','Número que se gera sozinho.'],
+ ['Para valores muito grandes de id (bilhões de linhas):','BIGSERIAL / BIGINT','SMALLINT','BOOLEAN','CHAR(1)','Mais faixa de valores.'],
+ ['Qual tipo para guardar a cor favorita (texto curto)?','VARCHAR(20)','NUMERIC','DATE','TIME','Texto variável.']]);
+addQ('d_restr',[
+ ['CONSTRAINT nome_da_regra CHECK (...) serve para...','Dar um nome à restrição e facilitar entender o erro','Apagar dados','Criar backup','Criar usuário','Erros ficam mais claros.'],
+ ['DEFAULT é uma restrição que...','Preenche um valor quando nenhum é informado','Impede valores','Apaga linhas','Cria FK','Valor padrão.'],
+ ['ON DELETE SET NULL faz...','Ao apagar o pai, a FK do filho fica nula','Apaga o filho','Impede o DELETE','Duplica o pai','Exige FK que aceite nulo.'],
+ ['UNIQUE permite valores nulos repetidos no PostgreSQL?','Sim: NULL não é igual a NULL','Não','Só um','Só em texto','Por isso use NOT NULL junto quando precisa.'],
+ ['Qual restrição garante que a idade mínima é 16?','CHECK (idade >= 16)','UNIQUE (idade)','DEFAULT 16','PRIMARY KEY (idade)','Condição = CHECK.']]);
+addQ('d_alter',[
+ ['Adicionar a restrição CHECK depois:','ALTER TABLE servico ADD CONSTRAINT preco_pos CHECK (preco > 0);','UPDATE CHECK servico;','INSERT CHECK;','CHECK servico;','ALTER TABLE ... ADD CONSTRAINT.'],
+ ['Tornar a coluna telefone obrigatória:','ALTER TABLE cliente ALTER COLUMN telefone SET NOT NULL;','UPDATE cliente telefone NOT NULL;','ALTER telefone = obrigatório;','DROP NULL;','SET NOT NULL.'],
+ ['Renomear a tabela cliente para clientes:','ALTER TABLE cliente RENAME TO clientes;','RENAME cliente;','UPDATE TABLE cliente;','DROP cliente;','RENAME TO.'],
+ ['SET NOT NULL falha quando...','Já existem linhas com o campo vazio','A tabela é grande','Há índice','Nunca','Preencha antes.'],
+ ['DROP TABLE IF EXISTS teste; evita...','Erro se a tabela não existir','Apagar a tabela','Backup','Nada','Script seguro para rodar de novo.']]);
+addQ('d_dml1',[
+ ['Mostrar só nome e preço dos serviços:','SELECT nome, preco FROM servico;','SELECT * nome preco;','GET nome, preco;','SELECT servico (nome, preco);','Liste as colunas.'],
+ ['INSERT sem informar as colunas exige...','Valores para todas as colunas, na ordem da tabela','Nada','Só o id','Só o nome','Melhor sempre listar as colunas.'],
+ ['Ver os 5 serviços mais baratos:','SELECT * FROM servico ORDER BY preco LIMIT 5;','SELECT 5 FROM servico;','SELECT * LIMIT ORDER;','SELECT TOP preco;','ORDER BY + LIMIT.'],
+ ["Clientes que se chamam 'Ana Souza':","SELECT * FROM cliente WHERE nome = 'Ana Souza';","SELECT * FROM cliente WHERE nome = Ana Souza;","SELECT Ana Souza;","SELECT * WHERE 'Ana';",'Texto entre aspas simples.'],
+ ['INSERT ... RETURNING id; no PostgreSQL devolve...','O id gerado para a nova linha','Todos os clientes','Nada','A senha','Útil para inserir o filho em seguida.']]);
+addQ('d_dml2',[
+ ['UPDATE sem WHERE é...','Uma alteração em TODAS as linhas','Uma alteração em uma linha','Um erro de sintaxe','Um backup','Perigo!'],
+ ['Apagar os serviços que custam menos de 10:','DELETE FROM servico WHERE preco < 10;','DELETE servico < 10;','DROP servico WHERE preco < 10;','UPDATE servico DELETE;','DELETE + WHERE.'],
+ ['Zerar a observação de todos os clientes (de propósito):','UPDATE cliente SET observacao = NULL;','DELETE observacao;','DROP observacao;','INSERT NULL;','Aqui sem WHERE é intencional.'],
+ ['O DELETE deu erro de FK. Significa que...','Existem registros filhos apontando para esse registro','O banco caiu','Falta ponto e vírgula','O registro não existe','Apague ou trate os filhos antes.'],
+ ['Dentro de uma transação, errei o UPDATE. O que salva?','ROLLBACK antes do COMMIT','COMMIT','DROP','Desligar o PC','Desfaz desde o BEGIN.']]);
+
+addQ('e_join',[
+ ['JOIN é o mesmo que...','INNER JOIN','LEFT JOIN','FULL JOIN','UNION','JOIN sozinho é INNER.'],
+ ['O JOIN da barbearia equivale, na planilha, a...','PROCV pelo ID','Gráfico','Filtro de cor','Mesclar células','Buscar na outra aba.'],
+ ['Para listar os serviços de cada agendamento, juntamos...','agendamento, agendamento_servico e servico','só cliente','só servico','barbeiro e cliente','A associativa fica no meio.'],
+ ['WHERE depois do JOIN serve para...','Filtrar o resultado já juntado','Juntar as tabelas','Criar tabela','Nada','Ex.: WHERE b.nome = ...'],
+ ['Resultado com o dobro de linhas esperado num JOIN costuma indicar...','Condição ON errada ou faltando','Banco rápido','Backup','Sucesso','Confira o ON.']]);
+addQ('e_group',[
+ ['COUNT(*) sem GROUP BY retorna...','Uma linha com o total da tabela','Uma linha por registro','Nada','Erro sempre','Resumo geral.'],
+ ['Total faturado no mês de novembro:',"SELECT SUM(i.preco_cobrado) FROM agendamento_servico i JOIN agendamento a ON a.id = i.agendamento_id WHERE a.data BETWEEN '2026-11-01' AND '2026-11-30';","SELECT SUM(novembro);","SELECT TOTAL(*) FROM 11;","SELECT * GROUP BY mes;",'Filtra no WHERE, soma no SUM.'],
+ ['GROUP BY com duas colunas (barbeiro, data) agrupa...','Por cada combinação de barbeiro e data','Só por barbeiro','Só por data','Nada','Grupos combinados.'],
+ ['Barbeiros com faturamento acima de 100:','... GROUP BY b.nome HAVING SUM(i.preco_cobrado) > 100','... WHERE SUM > 100','... ORDER BY 100','... LIMIT 100','HAVING para grupos.'],
+ ['Uma VIEW pode ser usada no FROM como se fosse...','Uma tabela','Um usuário','Um backup','Um índice','SELECT * FROM painel;']]);
+addQ('e_py',[
+ ['psycopg2.connect(...) retorna...','Uma conexão com o banco','Um cursor','Uma tabela','Um backup','Depois criamos o cursor.'],
+ ['Qual comando instala o psycopg2?','pip install psycopg2-binary','apt install python','npm install sql','SELECT psycopg2','Gerenciador de pacotes do Python.'],
+ ['O programa inseriu e mostrou "ok", mas o dado não está no banco. Provável causa:','Faltou con.commit()','Faltou print','O Python é lento','O banco é pequeno','Sem commit, nada fica.'],
+ ['Com with psycopg2.connect(...) as con: o que acontece ao sair do bloco sem erro?','A transação é confirmada (commit)','Tudo é desfeito sempre','O banco é apagado','Nada','O with cuida da transação.'],
+ ['Digitar  \' OR 1=1 --  no campo nome, num código com f-string, pode...','Mudar o comando SQL (SQL Injection)','Não fazer nada','Formatar o PC','Criar backup','Por isso usamos parâmetros.']]);
+addQ('e_teste',[
+ ['Teste de integração entre Python e banco verifica...','Se o programa grava e lê corretamente do banco','A cor da tela','O preço do PC','Nada','As duas partes juntas.'],
+ ['Depois do INSERT pelo programa, como conferir no banco?','Rodar um SELECT no DBeaver/psql','Confiar no print','Reiniciar o Windows','Apagar a tabela','Evidência no banco.'],
+ ['Cenário de teste "telefone repetido" deve verificar também...','Se o programa mostra uma mensagem amigável ao usuário','Se o banco apaga tudo','Nada','Se a tela muda de cor','O usuário precisa entender o erro.'],
+ ['Testar com o banco cheio (muitos registros) avalia...','Desempenho','A cor','A senha','O MER','Teste de carga.'],
+ ['Qual dado usar nos testes?','Dados de teste (fictícios)','Dados reais dos clientes','Senhas reais','Nenhum','Sigilo também no teste.']]);
+addQ('e_perm',[
+ ['GRANT ALL ON cliente TO caixa; dá...','Todas as permissões na tabela cliente','Só leitura','Nada','Permissão no banco todo','Use com cuidado.'],
+ ['Permissão para usar a sequência do SERIAL no INSERT:','GRANT USAGE ON SEQUENCE ... TO caixa;','GRANT DROP;','GRANT ALL DATABASE;','Não precisa nunca','Sem ela, o INSERT com SERIAL falha.'],
+ ['\\du no psql mostra...','Os usuários (roles) do servidor','As tabelas','Os bancos','Os backups','du = describe users.'],
+ ['Senha forte para o usuário do banco tem...','Tamanho grande, letras, números e símbolos, sem dados pessoais','"123456"','O nome do dono','"senha"','Senha forte e secreta.'],
+ ['O contador precisa só de relatórios. Qual permissão?','SELECT nas views de relatório','ALL no banco','DELETE','DROP','Só o necessário.']]);
+addQ('e_sigilo',[
+ ['Criptografar o backup protege...','Os dados se o arquivo for roubado','A velocidade','A cor','Nada','Sem a chave, não abre.'],
+ ['Senha do banco num arquivo .env que está no .gitignore é...','Melhor que no código, pois não vai para o repositório','Pior','Igual a publicar','Proibido','Segredo fora do Git.'],
+ ['Quem pode ver o salário dos funcionários no banco?','Só quem precisa (RH e dono), com permissão','Todos','Clientes','Ninguém nunca','Menor privilégio.'],
+ ['Apagar dados de clientes que pediram exclusão é...','Um direito do titular pela LGPD (com exceções legais)','Ilegal','Desnecessário','Só com backup','Atender o titular.'],
+ ['Dado sensível exige...','Cuidado e proteção redobrados','Menos cuidado','Ser público','Ir no relatório geral','Saúde, religião, biometria...']]);
+addQ('e_backup',[
+ ['pg_dump barbearia > barbearia.sql gera...','Um arquivo com os comandos SQL para recriar o banco','Uma planilha','Uma imagem','Nada','Backup lógico em texto.'],
+ ['Restaurar um .sql em texto puro usa...','psql -d banco_novo -f barbearia.sql','pg_dump','DROP','excel','O psql roda os comandos.'],
+ ['Teste de restauração deve ser feito...','Num banco/servidor separado, periodicamente','Por cima do banco de produção','Nunca','Só depois de um desastre','Sem estragar a produção.'],
+ ['Backup só de uma tabela:','pg_dump -t cliente barbearia > cliente.sql','pg_dump all','DROP cliente','SELECT backup','-t escolhe a tabela.'],
+ ['Antes de restaurar por cima de um banco existente, faça...','Um backup do estado atual','Nada','DROP de todos os backups','Formatação','Segurança antes de mexer.']]);
+addQ('e_doc',[
+ ['O histórico de mudanças do banco registra...','Data, autor e o que mudou em cada versão','Só a senha','Os clientes novos','Nada','Rastreabilidade.'],
+ ['Regras de negócio na documentação ficam...','Numeradas (RN01, RN02...)','Escondidas','Em código','Misturadas','Fácil de referenciar.'],
+ ['Print de tela no relatório técnico serve como...','Evidência do que foi feito','Enfeite','Senha','Backup','Prova visual.'],
+ ['A política de backup documentada diz...','O que, quando, onde e como é copiado e testado','A cor do servidor','O salário','Nada','Plano escrito.'],
+ ['Usuários e permissões na documentação devem mostrar...','Quem acessa o quê (sem as senhas)','As senhas','Nada','Só o dono','Matriz de acesso.']]);
+// ===================== BANCO AMPLIADO • parte 6 (15 por batalha): níveis de aprofundamento =====================
+addQ('a_cs',[
+ ['O servidor de banco responde a muitos clientes ao mesmo tempo porque...','O SGBD gerencia várias conexões simultâneas','Cada cliente tem um banco','Usa planilhas','Não responde','Conexões concorrentes.'],
+ ['Qual informação NÃO faz parte da conexão com o banco?','A cor do monitor','Host','Porta','Usuário','Host, porta, banco, usuário e senha.'],
+ ['O firewall do servidor deve deixar a porta 5432...','Aberta só para quem precisa (rede da empresa/API)','Aberta para a internet toda','Fechada para todos sempre','Sem regra','Segurança de rede.'],
+ ['Na arquitetura cliente-servidor, onde ficam as regras PK/FK?','No servidor, dentro do SGBD','Em cada cliente','No teclado','Na impressora','O banco garante para todos.'],
+ ['Um sistema web (site) acessa o banco...','Pelo servidor de aplicação, que conecta ao SGBD','Direto do navegador do visitante com a senha','Por e-mail','Por pen drive','Navegador nunca recebe a senha do banco.']]);
+addQ('a_cam',[
+ ['Validar o formato do telefone na tela é tarefa da...','Apresentação (e a aplicação valida de novo)','Camada de backup','Impressora','Nenhuma','Validar em mais de uma camada é boa prática.'],
+ ['Quem monta o comando SQL com parâmetros?','A camada de aplicação','A tela','O usuário','O monitor','A aplicação conversa com o banco.'],
+ ['Se a regra de negócio mudar (novo desconto), qual camada muda primeiro?','Aplicação','Apresentação sempre','Dados sempre','Nenhuma','Regras moram na aplicação.'],
+ ['Arquitetura em 3 camadas tem...','Apresentação, aplicação e dados','Só o banco','Só a tela','Backup, senha e porta','Três responsabilidades.'],
+ ['Uma vantagem de segurança das camadas é...','O banco fica escondido atrás da aplicação','O banco fica público','Não precisa de senha','Nenhuma','Menos exposição.']]);
+addQ('a_hier',[
+ ['O schema padrão do PostgreSQL é...','public','default','main','dbo','Toda tabela sem schema vai para o public.'],
+ ['SELECT * FROM agenda.cliente; consulta a tabela cliente do schema...','agenda','public','cliente','postgres','schema.tabela.'],
+ ['Bancos diferentes no mesmo servidor podem fazer JOIN direto entre si?','Normalmente não: cada banco é isolado','Sim, sempre','Só com Excel','Só às sextas','Use schemas no mesmo banco quando precisar juntar.'],
+ ['Permissões podem ser dadas por schema?','Sim (GRANT USAGE ON SCHEMA ...)','Não','Só por servidor','Só por linha','Organização ajuda na segurança.'],
+ ['Onde ver quais usuários existem no servidor?','No catálogo do sistema (pg_roles ou \\du)','Na tabela cliente','No Excel','No backup','O catálogo sabe tudo.']]);
+addQ('a_arm',[
+ ['Memória RAM do servidor maior costuma...','Deixar o banco mais rápido (mais cache)','Apagar dados','Não mudar nada','Deixar mais lento','Mais páginas na memória.'],
+ ['O log de transações também ajuda no...','Backup contínuo e na recuperação de falhas','Desenho do MER','Cadastro de clientes','Nada','WAL permite recuperar.'],
+ ['Disco cheio no servidor causa...','Falha ao gravar novos dados','Banco mais rápido','Nada','Mais espaço','Monitore o espaço.'],
+ ['Um índice ocupa...','Espaço extra em disco','Nenhum espaço','Só memória da tela','O lugar da tabela','Índice é outra estrutura.'],
+ ['Por que bancos usam SSD em servidores modernos?','Leitura e gravação muito mais rápidas','São mais bonitos','Não precisam de energia','Guardam senhas','Velocidade de acesso.']]);
+addQ('a_acid',[
+ ['COMMIT faz...','Confirma de forma definitiva a transação','Desfaz','Apaga','Cria tabela','Torna permanente.'],
+ ['Duas vendas do último produto ao mesmo tempo. O que evita vender o mesmo item duas vezes?','Isolamento e controle de concorrência do SGBD','O monitor','Sorte','A planilha','O SGBD organiza a fila.'],
+ ['Durabilidade é garantida principalmente pelo...','Log gravado em disco antes do COMMIT terminar','Monitor','Mouse','Excel','WAL.'],
+ ['Um único INSERT, sem BEGIN, também é uma transação?','Sim: o PostgreSQL faz commit automático de cada comando','Não','Só no Windows','Só com Python','Autocommit.'],
+ ['SAVEPOINT serve para...','Voltar só até um ponto dentro da transação','Fazer backup','Criar tabela','Apagar log','Rollback parcial.']]);
+addQ('a_tipos',[
+ ['MariaDB é...','Um SGBD relacional livre, derivado do MySQL','Um NoSQL de grafos','Uma planilha','Um editor de imagens','Fork do MySQL.'],
+ ['Firebase/Firestore (Google) é um banco...','NoSQL de documentos na nuvem','Relacional com SQL padrão','De planilhas','De papel','Muito usado em apps.'],
+ ['Licença livre (PostgreSQL) significa...','Pode usar sem pagar licença','Não tem suporte nenhum','É ilegal','É ruim','Custo zero de licença.'],
+ ['Para um sistema de notas fiscais, com regras rígidas, o melhor é...','Relacional com ACID','Chave-valor sem regras','Arquivo .txt','Grafo','Integridade é essencial.'],
+ ['Cache com Redis ao lado do PostgreSQL serve para...','Responder muito rápido dados acessados toda hora','Substituir o backup','Guardar as notas fiscais oficiais','Nada','Os dois juntos são comuns.']]);
+
+addQ('c_lev',[
+ ['Um bom roteiro de entrevista começa com...','Perguntas abertas sobre o trabalho do cliente','Perguntas de SQL','O preço do sistema','A escolha do SGBD','Entenda o negócio primeiro.'],
+ ['Protótipo (rascunho de tela) no levantamento ajuda a...','O cliente enxergar e corrigir o que precisa','Criar o banco sozinho','Fazer backup','Nada','Validação visual.'],
+ ['"O banco deve seguir a LGPD" é requisito...','Não funcional (legal/segurança)','Funcional','De cor','Inválido','Restrição de qualidade.'],
+ ['O que registrar depois da entrevista?','Uma ata com o que foi dito e as regras levantadas','Nada','Só a hora','A senha do cliente','Documente.'],
+ ['O cliente diz "quero tudo". O que fazer?','Priorizar com ele o que é essencial agora','Fazer tudo de uma vez','Desistir','Ignorar','Prioridade evita projeto infinito.']]);
+addQ('c_rn',[
+ ['"O cliente pode ter vários endereços de entrega" indica...','Uma tabela endereco ligada ao cliente (1:N)','Uma coluna endereco1','Nada','Um índice','Vários = tabela.'],
+ ['"O preço não pode ser alterado depois da venda" indica...','Guardar o preço no item da venda','Apagar o preço','Usar só o preço atual','Um backup','Histórico.'],
+ ['"Só gerentes podem dar desconto acima de 10%" é regra de...','Permissão/negócio, na aplicação e no controle de acesso','Normalização','Cardinalidade','Tipo de dado','Quem pode o quê.'],
+ ['"Cada mesa do restaurante tem um número único" vira...','UNIQUE no número da mesa','CHECK > 0','FK','Nada','Não repete.'],
+ ['Regra mal escrita: "o sistema guarda as coisas". O problema é...','É vaga: não diz quem, o quê, quantos','É longa','Está em português','Nenhum','Regra precisa ser específica.']]);
+addQ('c_atr',[
+ ['O CPF do cliente é um atributo...','Simples (e pode ser identificador)','Multivalorado','Derivado','Composto','Um valor só.'],
+ ['O tempo de casa do funcionário (vem da data de admissão) é...','Derivado','Composto','Multivalorado','Identificador','Calculado.'],
+ ['Se um atributo multivalorado tiver dados próprios (telefone + tipo: casa/celular), ele vira...','Uma tabela com essas colunas','Uma coluna com vírgula','Nada','Um índice','telefone(cliente_id, numero, tipo).'],
+ ['Atributo opcional é aquele que...','Pode ficar vazio','É sempre chave','Nunca existe','É derivado','Ex.: apelido.'],
+ ['Nome da cidade dentro do endereço do cliente pode levar a...','Uma tabela cidade, se repetir muito (normalização)','Nada nunca','Apagar o cliente','Um backup','Evita grafias diferentes.']]);
+addQ('c_fraca',[
+ ['A entidade forte é aquela que...','Existe por conta própria','Depende de outra','Não tem atributos','É sempre N:N','Ex.: pedido, cliente.'],
+ ['"Item do treino" sem o treino faz sentido?','Não: é entidade fraca','Sim','Só no Excel','Só com backup','Depende do treino.'],
+ ['Autorrelacionamento N:N (pessoa é amiga de pessoa) vira...','Uma tabela associativa com duas FKs para pessoa','Uma coluna amigo','Nada','Duas tabelas pessoa','amizade(pessoa1_id, pessoa2_id).'],
+ ['No funcionário-supervisor, o diretor (sem chefe) tem supervisor_id...','NULL','0 obrigatório','Ele mesmo sempre','Erro','Mínimo 0.'],
+ ['Ao apagar um pedido com itens, a regra comum é...','Apagar os itens junto (CASCADE) ou impedir','Deixar itens órfãos','Apagar o cliente','Nada','Integridade.']]);
+addQ('c_card',[
+ ['Lendo "PLANO (1,1) — ALUNO" do lado do aluno: cada aluno tem...','Exatamente um plano','Nenhum plano','Vários planos','Zero ou um','(1,1).'],
+ ['Mínimo 0 do lado da FK permite...','FK nula','FK obrigatória','PK duplicada','Nada','Opcional.'],
+ ['"Um veterinário atende de 0 a muitas consultas" é...','(0,N)','(1,1)','(1,N)','(0,1)','Pode não ter nenhuma ainda.'],
+ ['Na notação pé de galinha, a bolinha (○) significa...','Mínimo zero (opcional)','Muitos','Um','Erro','○ = zero.'],
+ ['1:1 obrigatório dos dois lados muitas vezes indica que...','As duas entidades podem virar uma tabela só','Precisa de 3 tabelas','Está errado','Precisa de N:N','Avalie juntar.']]);
+addQ('c_esp',[
+ ['Conta bancária que se divide em corrente e poupança é...','Especialização','Entidade fraca','Autorrelacionamento','Derivado','Genérica: conta.'],
+ ['A coluna "tipo" na tabela única da especialização serve para...','Dizer qual especialização é cada linha','Apagar dados','Criar PK','Nada','Ex.: tipo = cliente/funcionario.'],
+ ['Desvantagem de uma tabela só para todas as especializações:','Muitas colunas vazias para quem não usa','Nenhuma','Mais JOIN','Mais tabelas','Campos de um tipo ficam nulos para o outro.'],
+ ['Desvantagem de uma tabela para cada especialização (com a genérica):','Precisa de JOIN para ver tudo','Colunas vazias','Repetição total','Nenhuma','Mais organizada, mais JOIN.'],
+ ['Na especialização, a PK da especializada costuma ser...','A mesma PK da genérica (também FK)','Um texto','Nula','Composta de 5 campos','cliente.pessoa_id PK e FK.']]);
+addQ('c_map',[
+ ['Relacionamento com atributo (data da matrícula) em N:N: a data vai...','Para a tabela associativa','Para aluno','Para turma','Para lugar nenhum','Atributo do par.'],
+ ['Especialização mapeada com tabelas separadas liga a especializada à genérica por...','FK (que também é PK)','Nome','Cor','Nada','Herança via chave.'],
+ ['Relacionamento 1:1 opcional de um lado: a FK fica...','No lado opcional, com UNIQUE e aceitando nulo','No lado obrigatório sempre','Nas duas','Em nenhuma','Ex.: crachá do funcionário.'],
+ ['Depois do mapeamento, o próximo passo é...','Conferir a normalização e escrever o script SQL','Apagar o MER','Fazer backup','Nada','Lógico → físico.'],
+ ['Relacionamento ternário (aluno, treino, instrutor) vira...','Uma tabela com as três FKs','Três colunas no aluno','Nada','Um índice','Associativa com 3 FKs.']]);
+
+addQ('n_op',[
+ ['ILIKE no PostgreSQL faz...','LIKE ignorando maiúsculas e minúsculas','Apaga linhas','Ordena','Cria índice','ana, Ana e ANA.'],
+ ['OFFSET 10 LIMIT 10 mostra...','Da 11ª à 20ª linha (página 2)','As 10 primeiras','Nada','Tudo','Paginação.'],
+ ['IS NOT NULL encontra...','Linhas em que o campo foi preenchido','Linhas vazias','Tudo','Nada','O contrário de IS NULL.'],
+ ['ORDER BY nome, data ordena...','Por nome e, em caso de empate, por data','Só por data','Aleatório','Nada','Critério de desempate.'],
+ ["WHERE nome NOT LIKE 'A%' encontra...","Nomes que não começam com A","Nomes que começam com A","Só A","Nada",'NOT inverte.']]);
+addQ('n_agg',[
+ ['SUM numa coluna com valores nulos...','Ignora os nulos','Dá erro sempre','Conta os nulos como 1','Apaga','Agregações ignoram NULL (menos COUNT(*)).'],
+ ['AVG(preco) de 10, 20 e NULL dá...','15','10','0','Erro','NULL fica de fora.'],
+ ['COALESCE(nascimento, \'não informado\') serve para...','Trocar o NULL por um valor na exibição','Apagar','Criar','Ordenar','Primeiro valor não nulo.'],
+ ['GROUP BY data ORDER BY COUNT(*) DESC mostra primeiro...','O dia com mais agendamentos','O dia mais antigo','O mais novo','Nada','Ordena pelo total.'],
+ ['EXTRACT(MONTH FROM data) devolve...','O mês da data','O ano','O dia da semana em texto','A hora','Útil para agrupar por mês.']]);
+addQ('n_join',[
+ ['RIGHT JOIN de A com B mostra...','Todas as linhas de B, mesmo sem par em A','Todas de A','Só pares','Nada','Espelho do LEFT.'],
+ ['Subconsulta no FROM (SELECT ... ) AS t funciona como...','Uma tabela temporária','Um backup','Um índice','Um usuário','Tabela derivada.'],
+ ['Clientes que agendaram com o Carlos Silva, via subconsulta:',"WHERE id IN (SELECT cliente_id FROM agendamento WHERE barbeiro_id = 1)","WHERE Carlos","WHERE id = barbeiro","FROM Carlos",'IN com SELECT.'],
+ ['COUNT(a.id) num LEFT JOIN dá 0 para quem não tem par porque...','a.id é NULL e COUNT(coluna) não conta nulos','Erro','Apaga','Sorte','Por isso não use COUNT(*) aí.'],
+ ['Juntar a lista de e-mails de clientes e de barbeiros numa coluna só:','SELECT email FROM cliente UNION SELECT email FROM barbeiro;','JOIN email','SELECT email, email','GROUP BY email','UNION empilha.']]);
+addQ('n_idx',[
+ ['Índice UNIQUE serve também para...','Garantir que o valor não se repita','Apagar repetidos','Criar backup','Nada','UNIQUE cria índice único.'],
+ ['VIEW ajuda na segurança porque...','Dá para liberar só a view, sem as tabelas inteiras','Apaga as tabelas','Criptografa','Nada','Mostra só o necessário.'],
+ ['VIEW MATERIALIZADA (PostgreSQL) guarda...','O resultado pronto, atualizado com REFRESH','Nada','Só a senha','Um usuário','Rápida, mas precisa atualizar.'],
+ ['Sequência (SEQUENCE) gera...','Números em ordem para o id','Datas','Senhas','Backups','Por trás do SERIAL.'],
+ ['Transação longa demais pode...','Travar outras pessoas que querem os mesmos dados','Deixar tudo mais rápido','Fazer backup','Nada','Transações curtas.']]);
+
+addQ('g_teste',[
+ ['Teste de regressão é...','Testar de novo o que já funcionava, depois de uma mudança','Testar só o novo','Não testar','Um backup','Mudança pode quebrar o antigo.'],
+ ['Caso de teste bem escrito tem...','Passos claros que outra pessoa consegue repetir','Só "testar o sistema"','Senha','Nada','Reproduzível.'],
+ ['Encontrar um defeito no teste é...','Bom: ele foi achado antes do cliente','Ruim sempre','Motivo para esconder','Inútil','Teste existe para achar defeitos.'],
+ ['Conferir a contagem de registros antes e depois de uma operação ajuda a...','Provar que nada se perdeu ou duplicou','Deixar lento','Apagar','Nada','Evidência de persistência.'],
+ ['Defeito × falha:','Defeito é o erro no código/banco; falha é o problema que o usuário vê','São iguais','Falha é no backup','Defeito é a senha','Causa e efeito.']]);
+addQ('g_role',[
+ ['DROP ROLE joao; só funciona se...','O usuário não for dono de objetos nem tiver permissões pendentes','Sempre','Nunca','Ele estiver logado','Revogue e transfira antes.'],
+ ['GRANT CONNECT ON DATABASE barbearia TO caixa; permite...','Conectar no banco','Apagar o banco','Criar tabelas','Nada','Primeiro passo do acesso.'],
+ ['Usuário só de leitura para relatórios é uma aplicação do...','Menor privilégio','Backup','Normalização','ACID','Só o necessário.'],
+ ['Conta compartilhada (todo mundo com o mesmo login) é ruim porque...','Não dá para saber quem fez o quê','É mais segura','É obrigatória','Não é ruim','Cada um com o seu login.'],
+ ['Rever as permissões periodicamente serve para...','Tirar acessos que não são mais necessários','Dar mais acesso','Nada','Apagar o banco','Acesso acumulado é risco.']]);
+addQ('g_lgpd',[
+ ['Encarregado (DPO) é...','A pessoa que cuida da proteção de dados na empresa e fala com a ANPD','O técnico de impressora','O cliente','O SGBD','Canal de comunicação.'],
+ ['Guardar dados por mais tempo que o necessário fere...','O princípio da necessidade/retenção','Nada','O ACID','A 3FN','Defina prazo de guarda.'],
+ ['Pseudonimização é...','Trocar o identificador por um código, mas com chave para voltar','Apagar tudo','Publicar','Backup','Diferente da anonimização (sem volta).'],
+ ['Dado de criança e adolescente exige...','Consentimento de um responsável e cuidado especial','Nada','Publicação','Menos cuidado','Proteção especial na LGPD.'],
+ ['Qual é uma base legal para tratar dados além do consentimento?','Cumprir obrigação legal (ex.: nota fiscal)','Curiosidade','Vender para terceiros','Nenhuma','A LGPD lista várias bases legais.']]);
+addQ('g_mig',[
+ ['Migração "para frente" e "para trás" (up/down) significa...','Ter o script que aplica e o que desfaz a mudança','Mudar de cidade','Backup duplo','Nada','Plano de volta.'],
+ ['Renomear uma coluna usada pelo sistema sem avisar a equipe causa...','Erro no sistema que usa o nome antigo','Nada','Mais velocidade','Backup','Coordene com o código.'],
+ ['Preencher a coluna nova em 1 milhão de linhas deve ser feito...','Em lotes e fora do horário de pico','De uma vez no horário de pico','Nunca','À mão','Evita travar o sistema.'],
+ ['Comunicar a janela de manutenção aos usuários serve para...','Evitar surpresa e perda de trabalho','Nada','Apagar dados','Fazer backup','Transparência.'],
+ ['VACUUM no PostgreSQL recupera...','Espaço de linhas apagadas/atualizadas','Senhas','Backups antigos','Tabelas apagadas','Limpeza interna.']]);
+addQ('g_bkp',[
+ ['Backup "a quente" (com o banco ligado) é possível com pg_dump?','Sim, ele gera uma cópia consistente sem parar o banco','Não','Só desligando','Só no Excel','Consistência garantida.'],
+ ['Guardar 7 backups diários + 4 semanais + 12 mensais é uma política de...','Retenção','Normalização','Cardinalidade','Indexação','Quanto tempo guardar.'],
+ ['O backup terminou com erro e ninguém viu. O que faltou?','Monitoramento e alerta do backup','Mais RAM','Outro SGBD','Nada','Verifique se o backup deu certo.'],
+ ['Point-in-time recovery (PITR) permite...','Voltar o banco a um momento exato usando o log','Voltar no tempo de verdade','Apagar logs','Nada','Base + WAL.'],
+ ['Backup na nuvem deve ser...','Criptografado e com acesso restrito','Público','Sem senha','Compartilhado por link aberto','Dado pessoal protegido.']]);
 // ===================== SOM (8 bits, gerado no navegador) =====================
 const SOM={gesto:false,querida:'mapa',ctx:null,master:null,musG:null,fx:true,mus:true,faixa:null,passo:0,prox:0,timer:null};
 try{const p=JSON.parse(localStorage.getItem('reinoDosDados_som')||'{}');if(p.fx===false)SOM.fx=false;if(p.mus===false)SOM.mus=false}catch(e){}
@@ -2397,16 +2735,21 @@ function concluiu(id){const k=NOD[id].fase;
 function viajar2(id){fechar();setTimeout(()=>viajar(id),50)}
 
 // ---------- batalha ----------
-function batalha(id,treino){musica('batalha');const n=NOD[id];const[nomeI,corI,olhoI]=n.inimigo;const fila=Q[n.qs].slice().sort(()=>Math.random()-.5).slice(0,6).map(q=>({...q,errou:false}));const total=fila.length;let ac=0,errosB=0;
- const mon=monstro(corI,olhoI),hp=el('i',{style:'width:100%'}),fb=el('div',{class:'fb',hidden:''}),qt=el('div',{class:'fala'}),ops=el('div',{class:'ops'}),prox=el('button',{type:'button',hidden:''},'Próximo ▶');
- function mostra(){fb.hidden=true;prox.hidden=true;const q=fila[0];qt.textContent=q.q;ops.replaceChildren(...q.o.map((t,i)=>({t,i})).sort(()=>Math.random()-.5).map(o=>el('button',{type:'button',on:{click:ev=>resp(o.i,ev.currentTarget)}},o.t)))}
- function resp(i,btn){const q=fila[0];ops.querySelectorAll('button').forEach(b=>b.disabled=true);
-  if(i===q.c){sfx('acerto');btn.classList.add('certo');ac++;hp.style.width=((total-ac)/total*100)+'%';mon.classList.add('tremer');setTimeout(()=>mon.classList.remove('tremer'),400);if(!treino)ganharXP(q.errou?3:10,'');fb.className='fb ok';fb.textContent='Acertou! '+q.e;fila.shift()}
-  else{btn.classList.add('errado');errosB++;q.errou=true;if(!treino)errar(id);fb.className='fb no';fb.textContent=(treino?'Errou (treino: não perde vida). Dica: ':'Ai! -1 vida. Dica: ')+q.e+' A pergunta volta no fim.';fila.push(fila.shift())}
-  fb.hidden=false;prox.hidden=false;prox.focus();
+function batalha(id,treino){musica('batalha');const n=NOD[id];const[nomeI,corI,olhoI]=n.inimigo;
+ // sorteio sem repetição: acerto avança; erro troca por uma pergunta NOVA do banco (as erradas só voltam se o banco acabar)
+ const banco=Q[n.qs].slice().sort(()=>Math.random()-.5);const total=Math.min(6,banco.length);const erradas=[];let ac=0,errosB=0,q=null;
+ const mon=monstro(corI,olhoI),hp=el('i',{style:'width:100%'}),fb=el('div',{class:'fb',hidden:''}),qt=el('div',{class:'fala'}),ops=el('div',{class:'ops'}),prox=el('button',{type:'button',hidden:''},'Próximo ▶'),cont=el('div',{class:'dica'});
+ const pegar=()=>banco.length?banco.shift():erradas.sort(()=>Math.random()-.5).shift();
+ function mostra(){fb.hidden=true;prox.hidden=true;q=pegar();cont.textContent=`Golpe ${ac+1} de ${total} • erros: ${errosB}`;qt.textContent=q.q;
+  ops.replaceChildren(...q.o.map((t,i)=>({t,i})).sort(()=>Math.random()-.5).map(o=>{const b=el('button',{type:'button',on:{click:ev=>resp(o.i,ev.currentTarget)}},o.t);b.dataset.i=o.i;return b}))}
+ function resp(i,btn){ops.querySelectorAll('button').forEach(b=>b.disabled=true);
+  if(i===q.c){sfx('acerto');btn.classList.add('certo');ac++;hp.style.width=((total-ac)/total*100)+'%';mon.classList.add('tremer');setTimeout(()=>mon.classList.remove('tremer'),400);if(!treino)ganharXP(10,'');fb.className='fb ok';fb.replaceChildren(el('b',{},'Acertou! '),q.e||'')}
+  else{btn.classList.add('errado');const cb=ops.querySelector(`button[data-i="${q.c}"]`);if(cb)cb.classList.add('certo');errosB++;erradas.push(q);if(!treino)errar(id);fb.className='fb no';
+   fb.replaceChildren(el('b',{},treino?'Errou (treino: não perde vida). ':'Errou! -1 vida. '),'Resposta certa: ',el('b',{},q.o[q.c]),'. ',q.e||'',el('br'),el('span',{class:'dica'},'A próxima pergunta é nova.'))}
+  fb.hidden=false;prox.hidden=false;prox.focus();cont.textContent=`Golpe ${Math.min(ac+1,total)} de ${total} • erros: ${errosB}`;
   if(S.vida<=0){prox.textContent='Você desmaiou...';prox.onclick=()=>desmaio(id);return}
-  prox.textContent=fila.length?'Próximo ▶':(treino?'Fim do treino ▶':'Vitória! ▶');prox.onclick=()=>fila.length?mostra():(treino?treinoFim(id,errosB,total):vitoria(id,errosB))}
- cena(el('h2',{},(treino?'Treino: ':'Batalha: ')+nomeI),el('div',{class:'arena'},mon,el('div',{},el('div',{class:'dica'},`${nomeI} • ${total} golpes para vencer`),el('div',{class:'hpb'},hp))),qt,ops,fb,el('div',{class:'acoes'},prox));mostra()}
+  const fim=ac>=total;prox.textContent=!fim?'Próximo ▶':(treino?'Fim do treino ▶':'Vitória! ▶');prox.onclick=()=>!fim?mostra():(treino?treinoFim(id,errosB,total):vitoria(id,errosB))}
+ cena(el('h2',{},(treino?'Treino: ':'Batalha: ')+nomeI),el('div',{class:'arena'},mon,el('div',{},el('div',{class:'dica'},`${nomeI} • acerte ${total} para vencer`),el('div',{class:'hpb'},hp),cont)),qt,ops,fb,el('div',{class:'acoes'},prox));mostra()}
 function treinoFim(id,errosB,total){sfx('vitoria');cena(el('h2',{},'Treino concluído'),el('div',{class:'fala'},`${total} perguntas, ${errosB} erro(s). ${errosB?'Releia o pergaminho e treine de novo: as perguntas mudam a cada vez.':'Mandou bem!'}`),el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'),el('button',{type:'button',on:{click:()=>batalha(id,true)}},'Treinar de novo ▶')))}
 function desmaio(id){sfx('desmaio');S.vida=5;salvar();hud();const n=NOD[id];cena(el('h2',{},'Você desmaiou!'),el('div',{class:'fala'},'O curandeiro recuperou as suas vidas. O XP continua. Releia a história ou o pergaminho e tente de novo.'),
  el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Voltar ao mapa'),el('button',{type:'button',on:{click:()=>n.card!=null?pergaminho(n.card,()=>batalha(id)):batalha(id)}},'Tentar de novo')))}
