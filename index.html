@@ -130,7 +130,7 @@ textarea.sqlta{font-family:Consolas,'Courier New',monospace;font-size:19px;color
 .sqlfonte{border:2px dashed var(--borda);padding:8px;max-height:46vh;overflow:auto}
 pre.resp{white-space:pre-wrap;font-family:var(--f-txt);font-size:18px;margin:4px 0;background:var(--sombra);padding:6px}
 .codlib b{font-size:24px;letter-spacing:2px;color:#ffd166}
-.nv.oficina{border-color:#e85d04}
+.nv.oficina{border-color:#e85d04} .nv.arquiteto{border-color:#98c1d9} .nv.cartografo{border-color:#e76f51} .nv.minerador{border-color:#ffd166} .nv.guardiao{border-color:#48cae4}
 </style>
 <div class="wrap">
   <header class="hud px" aria-label="Status do aventureiro">
@@ -1081,6 +1081,622 @@ const L_OFICINA={id:'oficina',antes:'medio',nome:'Mestre',titulo:'A Oficina do C
    meu:{x:240,y:60,nome:'Oficina do MEU Sistema',ic:'atelie',tipo:'missoes',miss:'meu_sistema',npc:'Mestra Construtora',npcCor:'#e85d04',fala:'Último desafio: o banco do seu próprio sistema, do papel ao SQL.'}},
   pre:{observatorio:[],meu:['observatorio']},edges:[['observatorio','meu']]}]};
 LEVELS.push(L_OFICINA);
+// ===================== NÍVEIS NOVOS (23/11): Arquiteto e Cartógrafo =====================
+// helpers
+const _card=c=>{CARDS.push(c);return CARDS.length-1};
+const _hist=(q,c,cena,t,codigo)=>codigo?{q,c,cena,t,codigo}:{q,c,cena,t};
+
+// ---------------------------------------------------------------- ARQUITETO (Ind. 1)
+const CA_CS=_card({t:'Arquitetura cliente-servidor',p:[
+ 'O banco de dados não fica "dentro" do programa. Ele roda num SERVIDOR: um computador (ou serviço na nuvem) com o SGBD ligado o tempo todo, esperando pedidos.',
+ 'O CLIENTE é quem pede: o sistema da barbearia, o DBeaver, o pgAdmin, o psql ou um programa em Python. Ele manda um comando SQL pela rede e recebe a resposta.',
+ 'Para conversar, o cliente precisa de: endereço do servidor (host), porta (o PostgreSQL usa 5432 por padrão), nome do banco, usuário e senha.',
+ 'Vários clientes usam o mesmo banco ao mesmo tempo. Quem organiza a fila, as regras e a segurança é o SGBD, não o programa.',
+ 'Banco EMBUTIDO (como o SQLite) é a exceção: fica num arquivo dentro do próprio aplicativo. Serve para celular e programas pequenos, de um usuário só.'],
+ ex:'O caixa e o celular do Seu Jair acessam o mesmo PostgreSQL, no servidor da barbearia, porta 5432. Os dois veem o mesmo agendamento na hora.'});
+const CA_CAM=_card({t:'Arquitetura em camadas',p:[
+ 'Sistemas profissionais se dividem em CAMADAS, cada uma com uma tarefa.',
+ 'Camada de APRESENTAÇÃO: as telas (site, aplicativo, terminal). Só mostra e recebe dados do usuário.',
+ 'Camada de APLICAÇÃO (ou de negócio): o programa que aplica as regras (ex.: não deixar agendar no passado) e monta o SQL.',
+ 'Camada de DADOS: o SGBD e o banco. Guarda os dados com segurança e garante as restrições (PK, FK, NOT NULL, CHECK).',
+ 'Por que separar? Dá para trocar a tela sem mexer no banco, vários apps usam o mesmo banco e a senha do banco nunca vai para a tela do usuário.'],
+ ex:'App do cliente (apresentação) → API em Python (aplicação) → PostgreSQL (dados). O app nunca fala direto com o banco.'});
+const CA_HIER=_card({t:'Servidor, banco, schema e tabela',p:[
+ 'Dentro de um servidor PostgreSQL existe uma hierarquia, como um prédio: SERVIDOR (instância) → BANCOS DE DADOS → SCHEMAS → TABELAS → LINHAS e COLUNAS.',
+ 'Uma mesma instância pode ter vários bancos: barbearia, clinica_pet, financeiro. Cada um é isolado dos outros.',
+ 'O SCHEMA é uma pasta dentro do banco que agrupa tabelas. O padrão é o public. Dá para separar, por exemplo, agenda.cliente e financeiro.pagamento.',
+ 'O SGBD guarda informações sobre o próprio banco no CATÁLOGO (dicionário do sistema): quais tabelas existem, colunas, tipos, chaves e usuários. No PostgreSQL dá para consultar pelo information_schema.',
+ 'Nome completo de uma tabela: schema.tabela (ex.: public.cliente).'],
+ ex:"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'; lista as tabelas da barbearia."});
+const CA_ARM=_card({t:'Como o SGBD guarda os dados',p:[
+ 'Os dados ficam em ARQUIVOS no disco do servidor, divididos em páginas. Ninguém abre esses arquivos na mão: só o SGBD.',
+ 'Para ser rápido, o SGBD mantém as páginas mais usadas na MEMÓRIA (buffer/cache). Ler da memória é muito mais rápido que ler do disco.',
+ 'Antes de mudar um dado, o PostgreSQL anota a mudança num LOG (o WAL, Write-Ahead Log). Se a luz cair, ele usa o log para não perder nem corromper nada.',
+ 'O ÍNDICE é como o índice de um livro: em vez de ler a tabela inteira, o SGBD vai direto às linhas procuradas. A PK já cria um índice sozinha.',
+ 'Por isso o SGBD é diferente de uma planilha: ele cuida de disco, memória, log, índices e acesso de muitas pessoas ao mesmo tempo.'],
+ ex:'Com 50 mil agendamentos, buscar por data fica lento. Um índice em agendamento(data) faz a busca voltar a ser instantânea.'});
+const CA_ACID=_card({t:'Transações e ACID',p:[
+ 'TRANSAÇÃO é um conjunto de comandos que precisa acontecer INTEIRO ou NADA. Exemplo: tirar o dinheiro de uma conta e colocar na outra.',
+ 'BEGIN abre a transação, COMMIT confirma tudo e ROLLBACK desfaz tudo desde o BEGIN.',
+ 'A de ATOMICIDADE: tudo ou nada. C de CONSISTÊNCIA: o banco sai de um estado válido para outro válido (as regras continuam valendo).',
+ 'I de ISOLAMENTO: duas pessoas ao mesmo tempo não atrapalham uma à outra (ninguém vê o trabalho pela metade do outro). D de DURABILIDADE: depois do COMMIT, o dado não se perde nem se faltar luz.',
+ 'Os SGBDs relacionais (PostgreSQL, MySQL, SQL Server, Oracle) garantem ACID. É por isso que bancos, lojas e hospitais confiam neles.'],
+ ex:'BEGIN; INSERT INTO agendamento ...; INSERT INTO agendamento_servico ...; COMMIT; Se o segundo INSERT falhar, ROLLBACK e não fica agendamento sem serviço.'});
+const CA_TIPOS=_card({t:'Tipos de SGBD e como escolher',p:[
+ 'RELACIONAL (SQL): dados em tabelas ligadas por chaves, com SQL e ACID. PostgreSQL e MySQL (livres), SQL Server e Oracle (pagos), SQLite (embutido).',
+ 'NoSQL de DOCUMENTOS (MongoDB): guarda fichas no formato JSON, cada uma pode ter campos diferentes. CHAVE-VALOR (Redis): muito rápido, usado como cache e sessão.',
+ 'NoSQL de GRAFOS (Neo4j): ótimo para relações em rede, como "amigo de amigo". COLUNAR (Cassandra): volumes gigantes de dados distribuídos.',
+ 'Também existe o banco na NUVEM (DBaaS): o provedor cuida do servidor, das atualizações e do backup, e você paga pelo uso.',
+ 'Como escolher: tipo de dado, regras e integridade, volume, quantas pessoas usam, custo da licença, conhecimento da equipe e suporte. Para cadastros, vendas e agendamentos, o relacional é o padrão.'],
+ ex:'Barbearia: PostgreSQL (dados estruturados, regras, ACID e gratuito). Contagem de visitas do site em tempo real: Redis.'});
+
+Object.assign(Q,{
+ a_cs:[
+  {q:'Na arquitetura cliente-servidor, quem é o SERVIDOR?',o:['O computador onde o SGBD fica ligado esperando pedidos','A tela do aplicativo','O usuário do sistema','O teclado do caixa'],c:0,e:'O servidor roda o SGBD; os clientes pedem.'},
+  {q:'Qual é a porta padrão do PostgreSQL?',o:['5432','80','3306','8080'],c:0,e:'3306 é do MySQL; 80 e 8080 são de sites.'},
+  {q:'O que o cliente precisa informar para se conectar ao banco?',o:['Host, porta, nome do banco, usuário e senha','Só o nome da tabela','O número de série do HD','Nada, o banco adivinha'],c:0,e:'São os dados da conexão (como no DBeaver).'},
+  {q:'O DBeaver, o pgAdmin e um programa em Python, em relação ao PostgreSQL, são...',o:['Clientes','Servidores','Tabelas','Schemas'],c:0,e:'Eles mandam SQL e recebem respostas.'},
+  {q:'Quando um banco EMBUTIDO, como o SQLite, é uma boa escolha?',o:['Aplicativo pequeno ou de celular, com um usuário só','Sistema com 200 caixas ao mesmo tempo','Banco central de uma rede de lojas','Nunca'],c:0,e:'O arquivo fica dentro do próprio app.'},
+  {q:'Dois caixas agendam ao mesmo tempo. Quem garante que não haverá bagunça?',o:['O SGBD no servidor','O monitor do caixa','O Excel','A impressora'],c:0,e:'O SGBD controla o acesso simultâneo.'}],
+ a_cam:[
+  {q:'Em qual camada ficam as telas do sistema?',o:['Apresentação','Dados','Aplicação','Backup'],c:0,e:'A apresentação só mostra e recebe dados.'},
+  {q:'A regra "não pode agendar no passado" é verificada principalmente em qual camada?',o:['Aplicação (negócio), e pode ser reforçada no banco com CHECK','Apresentação apenas','Em nenhuma','No cabo de rede'],c:0,e:'Regras de negócio moram na aplicação e o banco reforça.'},
+  {q:'Qual camada garante PK, FK e NOT NULL?',o:['Dados (o SGBD)','Apresentação','O navegador','O usuário'],c:0,e:'As restrições ficam no banco.'},
+  {q:'Por que a senha do banco não deve ir para o app do celular do cliente?',o:['Qualquer um poderia abrir o app, pegar a senha e acessar o banco direto','Porque o celular não tem teclado','Porque senha ocupa muito espaço','Porque o banco não usa senha'],c:0,e:'O app fala com a aplicação (API), que fala com o banco.'},
+  {q:'Uma vantagem de separar em camadas é...',o:['Trocar a tela sem mexer no banco','Não precisar de banco','Não precisar testar','Deixar tudo num arquivo só'],c:0,e:'Cada camada muda sem quebrar as outras.'},
+  {q:'Ordem certa do caminho de um pedido:',o:['Tela → aplicação → banco','Banco → tela → aplicação','Tela → banco → impressora','Aplicação → usuário → tela'],c:0,e:'A aplicação fica no meio.'}],
+ a_hier:[
+  {q:'Qual é a hierarquia correta no PostgreSQL?',o:['Servidor → banco → schema → tabela','Tabela → banco → servidor → schema','Schema → servidor → linha → banco','Banco → linha → schema → servidor'],c:0,e:'Como um prédio: servidor, bancos, pastas (schemas) e tabelas.'},
+  {q:'O que é um SCHEMA?',o:['Uma pasta dentro do banco que agrupa tabelas','Uma linha da tabela','Um tipo de backup','Um usuário'],c:0,e:'O schema padrão é o public.'},
+  {q:'Uma instância do PostgreSQL pode ter vários bancos (barbearia, clinica_pet)?',o:['Sim, e cada um é isolado','Não, só um por computador','Só se forem do mesmo dono','Só no Windows'],c:0,e:'Um servidor, vários bancos.'},
+  {q:'Onde o SGBD guarda a informação de quais tabelas e colunas existem?',o:['No catálogo do sistema (information_schema)','Num caderno','Na tabela cliente','No backup'],c:0,e:'É o dicionário do próprio SGBD.'},
+  {q:'O nome completo da tabela cliente no schema padrão é...',o:['public.cliente','cliente.public','barbearia:cliente','cliente@5432'],c:0,e:'schema.tabela'},
+  {q:'O financeiro quer separar as tabelas dele das tabelas da agenda, no mesmo banco. O que usar?',o:['Dois schemas: agenda e financeiro','Duas planilhas','Duas portas','Dois monitores'],c:0,e:'Schemas organizam o banco.'}],
+ a_arm:[
+  {q:'Onde o SGBD guarda os dados de forma permanente?',o:['Em arquivos no disco do servidor','Só na memória RAM','Na tela','No cabo de rede'],c:0,e:'Disco é persistente; a RAM apaga.'},
+  {q:'Para que serve o buffer (cache) de memória?',o:['Manter as páginas mais usadas na RAM e responder mais rápido','Apagar dados antigos','Guardar senhas','Imprimir relatórios'],c:0,e:'Ler da memória é mais rápido.'},
+  {q:'A luz caiu no meio de um INSERT. O que o PostgreSQL usa para não corromper o banco?',o:['O log de transações (WAL)','O Excel','A lixeira do Windows','Nada'],c:0,e:'Ele anota antes de gravar e se recupera pelo log.'},
+  {q:'O que um ÍNDICE faz?',o:['Acha as linhas sem ler a tabela inteira','Apaga linhas repetidas','Cria backup','Troca a senha'],c:0,e:'Como o índice de um livro.'},
+  {q:'Qual coluna já ganha índice automaticamente?',o:['A chave primária','Todas as colunas de texto','Nenhuma','A coluna de observações'],c:0,e:'PK (e UNIQUE) criam índice.'},
+  {q:'Por que não abrir os arquivos do banco no Bloco de Notas?',o:['Só o SGBD sabe ler e manter esses arquivos sem estragar','Porque são vídeos','Porque o Windows proíbe','Porque estão na nuvem'],c:0,e:'Acesso sempre pelo SGBD, com SQL.'}],
+ a_acid:[
+  {q:'O que é uma transação?',o:['Comandos que acontecem inteiros ou nenhum','Um tipo de tabela','Uma senha forte','Um backup'],c:0,e:'Tudo ou nada.'},
+  {q:'Qual comando desfaz tudo desde o BEGIN?',o:['ROLLBACK','COMMIT','DELETE','DROP'],c:0,e:'COMMIT confirma; ROLLBACK desfaz.'},
+  {q:'Depois do COMMIT a luz caiu. O dado se perde?',o:['Não: é a Durabilidade','Sim, sempre','Só se for sexta','Depende do monitor'],c:0,e:'D de durabilidade.'},
+  {q:'Duas atendentes editam o mesmo agendamento ao mesmo tempo e uma não vê a edição pela metade da outra. Qual letra do ACID é essa?',o:['I, Isolamento','A, Atomicidade','D, Durabilidade','C, Cópia'],c:0,e:'Isolamento.'},
+  {q:'Um agendamento foi gravado, mas o serviço deu erro. Com transação, o que acontece?',o:['ROLLBACK: nada fica gravado pela metade','Fica o agendamento sem serviço','O SGBD apaga o banco inteiro','O caixa trava para sempre'],c:0,e:'Atomicidade.'},
+  {q:'Consistência no ACID significa...',o:['As regras (PK, FK, CHECK) continuam valendo depois da transação','Os dados ficam bonitos','O banco fica mais rápido','Todo mundo vê tudo'],c:0,e:'Um estado válido para outro válido.'}],
+ a_tipos:[
+  {q:'Qual destes é um SGBD RELACIONAL e gratuito?',o:['PostgreSQL','Oracle','Redis','Neo4j'],c:0,e:'MySQL também é livre; Oracle é pago.'},
+  {q:'O MongoDB guarda os dados como...',o:['Documentos no formato JSON','Tabelas com FK','Grafos','Planilhas'],c:0,e:'NoSQL de documentos.'},
+  {q:'Para uma rede social, "quem é amigo de amigo de quem", qual tipo encaixa melhor?',o:['Banco de grafos (Neo4j)','Planilha','Arquivo .txt','Chave-valor apenas'],c:0,e:'Grafos ligam pessoas a pessoas.'},
+  {q:'O Redis é muito usado como...',o:['Cache e sessão (chave-valor, muito rápido)','Banco de notas fiscais com ACID','Editor de texto','Ferramenta de MER'],c:0,e:'Chave-valor na memória.'},
+  {q:'O que é DBaaS?',o:['Banco na nuvem em que o provedor cuida do servidor e do backup','Um tipo de chave primária','Um comando SQL','Um vírus'],c:0,e:'Database as a Service.'},
+  {q:'Para o agendamento da barbearia, com regras e chaves, a melhor escolha é...',o:['Relacional, como o PostgreSQL','Grafos','Só o Redis','Bloco de Notas'],c:0,e:'Dados estruturados com integridade.'}]
+});
+
+MISSOES.arquitetura={regras:[['Cliente','A barbearia abriu 2 filiais. As 3 lojas e um app de agendamento para os clientes precisam usar a MESMA agenda.'],AVISO_ESC],
+ fim:'Projeto de arquitetura entregue. Agora, enfrente o Titã do Servidor Caído.',
+ lista:[
+  {t:'Missão 1 • Peças da arquitetura',xp:20,txt:'Escolha a peça certa de cada camada para a rede de barbearias.',
+   itens:[['Apresentação',['App no celular e tela do caixa','PostgreSQL','Planilha no pen drive'],'App no celular e tela do caixa'],['Aplicação',['API em Python com as regras','Impressora','Arquivo .txt'],'API em Python com as regras'],['Dados',['SGBD PostgreSQL num servidor','Excel em cada loja','Caderno da recepção'],'SGBD PostgreSQL num servidor'],['Porta do banco',['5432','21','25'],'5432']],
+   e:'Um banco central, uma API no meio e várias telas.'},
+  {t:'Missão 2 • Organizando o servidor',xp:20,tipo:'chips',txt:'Quais itens fazem parte da hierarquia dentro do servidor PostgreSQL da rede?',
+   ops:['banco barbearia','schema agenda','schema financeiro','tabela agenda.cliente','planilha da filial','pasta Downloads'],certo:['banco barbearia','schema agenda','schema financeiro','tabela agenda.cliente'],
+   e:'Planilha e Downloads ficam fora do SGBD.'},
+  {t:'Escrita • Justifique a arquitetura',xp:30,tipo:'texto',min:50,chaves:['servidor','cliente','camada','sgbd','postgres','transac','porta','backup','api'],nchaves:3,
+   txt:'Explique ao Seu Jair, com as suas palavras, como vai funcionar a arquitetura da rede de barbearias: onde fica o banco, quem acessa, por que as lojas não terão cada uma a sua planilha e por que usar transação no agendamento.',
+   e:'Bom texto cita servidor central com SGBD, clientes (app e caixas), camadas e transação para não gravar nada pela metade.'}]};
+
+CHEFES.tita={nome:'Titã do Servidor Caído',cor:'#457b9d',olho:'#f1faee',selo:'tita',regras:[['Alerta','Cada filial criou o seu próprio banco no próprio computador. Os agendamentos estão desencontrados e um cliente foi atendido duas vezes no mesmo horário.']],
+ fim:'O Titã caiu: um servidor central, camadas separadas e transações. Você concluiu a Torre do Servidor!',
+ etapas:[
+  {q:'Qual é a causa principal do problema?',o:['Três bancos separados, sem uma fonte única de dados','Falta de impressora','O PostgreSQL não serve para barbearia','Os clientes chegaram atrasados'],c:0,e:'Uma agenda só, num servidor só.'},
+  {q:'Qual arquitetura resolve?',o:['Cliente-servidor: um SGBD central e todas as lojas como clientes','Uma planilha por loja mandada por e-mail','Um SQLite em cada celular','Anotar no papel'],c:0,e:'Todos acessam o mesmo banco.'},
+  {tipo:'chips',q:'Como impedir dois atendimentos no mesmo horário com o mesmo barbeiro?',ops:['UNIQUE (barbeiro_id, data, hora)','transação no agendamento','isolamento do SGBD','pedir para o cliente avisar','apagar o banco toda noite'],certo:['UNIQUE (barbeiro_id, data, hora)','transação no agendamento','isolamento do SGBD'],e:'Restrição + transação + isolamento.'},
+  {q:'Golpe final: o servidor central caiu. O que evita que as 3 lojas percam tudo?',o:['Backup automático fora do servidor, testado','Ter fé','Desligar as lojas','Criar um banco novo vazio'],c:0,e:'Centralizar exige backup.'}]};
+
+// ---------------------------------------------------------------- CARTÓGRAFO (Ind. 2 e 4)
+const CC_LEV=_card({t:'Levantamento de requisitos',p:[
+ 'Antes de desenhar o banco, descubra o que o cliente PRECISA. Isso é o levantamento de requisitos.',
+ 'ENTREVISTA: conversar com o dono e com quem usa o sistema. Pergunte "o que você anota hoje?", "que relatório precisa?", "o que dá errado?".',
+ 'QUESTIONÁRIO (muitas pessoas), OBSERVAÇÃO (ver o trabalho acontecendo) e ANÁLISE DE DOCUMENTOS (fichas, planilhas, notas, recibos) completam a entrevista.',
+ 'Requisito FUNCIONAL é o que o sistema faz (cadastrar cliente, agendar). NÃO FUNCIONAL é como faz (backup diário, 5 caixas ao mesmo tempo, seguir a LGPD, responder em 2 segundos).',
+ 'Tudo vira REGRAS DE NEGÓCIO numeradas (RN01, RN02...), escritas na linguagem do cliente e confirmadas com ele.'],
+ ex:'Olhando a ficha de papel da barbearia, você descobre campos que ninguém tinha falado na entrevista: "indicado por" e "alergia a produto".'});
+const CC_RN=_card({t:'Das regras ao modelo',p:[
+ 'Uma boa dica para ler as regras: SUBSTANTIVOS costumam virar ENTIDADES ou ATRIBUTOS; VERBOS costumam virar RELACIONAMENTOS.',
+ '"O CLIENTE FAZ AGENDAMENTOS": cliente e agendamento são entidades; "faz" é o relacionamento.',
+ 'Palavras do cliente viram restrições: "obrigatório" = NOT NULL; "não pode repetir" = UNIQUE; "maior que zero" = CHECK; "só um" ou "vários" = cardinalidade.',
+ 'Se algo tem dados próprios e aparece várias vezes, é entidade (barbeiro tem nome e especialidade). Se é só uma característica, é atributo (cor do cabelo).',
+ 'Na dúvida, volte ao cliente. Regra mal entendida vira banco errado.'],
+ ex:'RN09: "Cada barbeiro atende em uma unidade; uma unidade tem vários barbeiros e o endereço é obrigatório." Entidade UNIDADE, relacionamento 1:N, endereço NOT NULL.'});
+const CC_ATR=_card({t:'Tipos de atributo',p:[
+ 'SIMPLES: não se divide (nome do serviço). COMPOSTO: divide-se em partes (endereço = rua, número, bairro, cidade, CEP). No banco, vira várias colunas.',
+ 'MULTIVALORADO: pode ter vários valores para a mesma pessoa (telefones). Não pode ficar numa coluna só (quebra a 1FN): vira uma tabela própria, como cliente_telefone.',
+ 'DERIVADO: calculado a partir de outro (idade vem da data de nascimento; total vem da soma dos itens). Normalmente não guardamos: calculamos na consulta.',
+ 'IDENTIFICADOR: o atributo que identifica cada ocorrência, que vira a chave primária (id, CPF).',
+ 'No MER (notação de Chen), o multivalorado aparece com elipse dupla e o derivado com elipse tracejada.'],
+ ex:'cliente(id, nome, rua, numero, bairro, nascimento) e cliente_telefone(cliente_id, telefone). A idade sai do nascimento.'});
+const CC_FRACA=_card({t:'Entidade fraca e autorrelacionamento',p:[
+ 'ENTIDADE FRACA só existe se outra existir. Ela depende da "forte" para ser identificada.',
+ 'Exemplos: o ITEM do pedido não existe sem o pedido; o DEPENDENTE do plano não existe sem o titular. A chave dela costuma incluir a chave da forte (pedido_id, numero_item).',
+ 'Se o pedido for apagado, os itens vão junto (ON DELETE CASCADE) ou o banco impede apagar.',
+ 'AUTORRELACIONAMENTO: a entidade se relaciona com ela mesma. Um funcionário é SUPERVISOR de outros funcionários; um cliente INDICA outro cliente.',
+ 'No banco, o autorrelacionamento vira uma FK que aponta para a própria tabela: funcionario.supervisor_id REFERENCES funcionario(id).'],
+ ex:'cliente.indicado_por REFERENCES cliente(id): o Diego foi indicado pela Ana. A coluna pode ser nula: nem todo cliente foi indicado.'});
+const CC_CARD=_card({t:'Cardinalidade mínima e máxima',p:[
+ 'A cardinalidade diz QUANTOS de um lado se ligam com o outro. Leia nos DOIS sentidos.',
+ 'MÁXIMA: 1 ou N (muitos). Dá os tipos 1:1, 1:N e N:N.',
+ 'MÍNIMA: 0 (opcional) ou 1 (obrigatório). Escrevemos (mín, máx): (0,N) = nenhum ou muitos; (1,1) = exatamente um.',
+ 'Exemplo: AGENDAMENTO (1,1) CLIENTE: todo agendamento tem um e só um cliente. CLIENTE (0,N) AGENDAMENTO: um cliente pode ter nenhum ou muitos agendamentos.',
+ 'No banco: mínima 1 do lado da FK vira NOT NULL; mínima 0 deixa a FK aceitar nulo. Na notação pé de galinha, o tridente é o "muitos", o traço é o "um" e a bolinha é o "zero".'],
+ ex:'agendamento.cliente_id NOT NULL (mínimo 1). cliente.indicado_por pode ser nulo (mínimo 0).'});
+const CC_ESP=_card({t:'Generalização e especialização',p:[
+ 'Às vezes várias entidades têm muita coisa em comum. Criamos uma entidade GENÉRICA e as ESPECIALIZADAS.',
+ 'Exemplo: PESSOA (nome, telefone, CPF) se especializa em CLIENTE (data do último corte) e FUNCIONÁRIO (salário, admissão).',
+ 'TOTAL: toda pessoa precisa ser cliente ou funcionário. PARCIAL: pode existir pessoa que não é nenhum dos dois. EXCLUSIVA: ou um, ou outro. COMPARTILHADA: pode ser os dois.',
+ 'Como vira tabela: 1) uma tabela para cada (pessoa, cliente com pessoa_id, funcionario com pessoa_id); 2) uma tabela só, com coluna tipo; 3) só as especializadas, repetindo os campos comuns.',
+ 'A opção 1 é a mais organizada; a 2 é mais simples quando as especializadas têm poucos campos próprios.'],
+ ex:'Clínica Pet: PET se especializa em CÃO (porte) e GATO (castrado). Uma tabela pet com a coluna especie resolve.'});
+const CC_MAP=_card({t:'Do MER para as tabelas (mapeamento)',p:[
+ 'Regra 1: cada ENTIDADE vira uma TABELA; o identificador vira PRIMARY KEY.',
+ 'Regra 2: relacionamento 1:N → a FK vai na tabela do lado N (o agendamento recebe cliente_id).',
+ 'Regra 3: relacionamento 1:1 → FK em um dos lados, com UNIQUE (ex.: funcionario.cracha_id UNIQUE).',
+ 'Regra 4: relacionamento N:N → nova TABELA ASSOCIATIVA com as duas FKs (e os atributos do relacionamento, como preco_cobrado).',
+ 'Regra 5: atributo composto → várias colunas; multivalorado → tabela própria; derivado → normalmente não vira coluna.'],
+ ex:'ALUNO N:N TREINO vira aluno_treino(aluno_id, treino_id, data_inicio). PLANO 1:N ALUNO vira aluno.plano_id.'});
+
+Object.assign(Q,{
+ c_lev:[
+  {q:'Qual técnica é conversar com o dono e com os funcionários?',o:['Entrevista','Backup','Normalização','JOIN'],c:0,e:'A primeira técnica de levantamento.'},
+  {q:'Olhar fichas de papel, planilhas e recibos é...',o:['Análise de documentos','Observação de estrelas','Teste de carga','Restauração'],c:0,e:'Os documentos revelam campos esquecidos.'},
+  {q:'"O sistema deve permitir agendar um horário" é requisito...',o:['Funcional','Não funcional','Físico','Opcional'],c:0,e:'É o que o sistema faz.'},
+  {q:'"O banco deve ter backup diário" é requisito...',o:['Não funcional','Funcional','De interface','Inválido'],c:0,e:'É como o sistema deve funcionar.'},
+  {q:'Boa pergunta para a entrevista com o Seu Jair:',o:['"Que informações você precisa ver no fim do mês?"','"Qual é o seu SGBD favorito?"','"Você prefere VARCHAR ou TEXT?"','"Posso apagar a planilha?"'],c:0,e:'Fale a língua do cliente.'},
+  {q:'Para ouvir os 40 clientes da barbearia, a técnica mais prática é...',o:['Questionário','Entrevista individual de 2 horas com cada um','Observação noturna','Nenhuma'],c:0,e:'Questionário alcança muita gente.'}],
+ c_rn:[
+  {q:'Em "O cliente faz agendamentos", o verbo "faz" costuma virar...',o:['Relacionamento','Entidade','Atributo','Índice'],c:0,e:'Substantivo = entidade; verbo = relacionamento.'},
+  {q:'"O telefone não pode se repetir" vira...',o:['UNIQUE','CHECK > 0','DEFAULT','DROP'],c:0,e:'Não repete = UNIQUE.'},
+  {q:'"O preço deve ser maior que zero" vira...',o:['CHECK (preco > 0)','UNIQUE','FOREIGN KEY','ORDER BY'],c:0,e:'Condição = CHECK.'},
+  {q:'"O endereço da unidade é obrigatório" vira...',o:['NOT NULL','NULL','PRIMARY KEY no endereço','INDEX'],c:0,e:'Obrigatório = NOT NULL.'},
+  {q:'Barbeiro tem nome, telefone e especialidade, e há vários. Ele é...',o:['Entidade','Atributo do cliente','Restrição','Consulta'],c:0,e:'Tem dados próprios e várias ocorrências.'},
+  {q:'A regra ficou ambígua. O que fazer?',o:['Voltar ao cliente e confirmar','Chutar','Ignorar a regra','Criar todas as tabelas possíveis'],c:0,e:'Regra confirmada com o cliente.'}],
+ c_atr:[
+  {q:'Endereço (rua, número, bairro, CEP) é um atributo...',o:['Composto','Multivalorado','Derivado','Identificador'],c:0,e:'Divide-se em partes.'},
+  {q:'O cliente tem vários telefones. Esse atributo é...',o:['Multivalorado','Simples','Derivado','Chave'],c:0,e:'Vários valores para a mesma pessoa.'},
+  {q:'Como guardar o multivalorado telefones no banco?',o:['Numa tabela própria: cliente_telefone(cliente_id, telefone)','Tudo numa coluna separado por vírgula','Em 10 colunas telefone1...telefone10','Não guarda'],c:0,e:'Vírgula quebra a 1FN.'},
+  {q:'A idade do cliente é um atributo...',o:['Derivado (vem da data de nascimento)','Composto','Multivalorado','Identificador'],c:0,e:'Calcula-se na consulta.'},
+  {q:'Por que normalmente não guardamos o atributo derivado?',o:['Ele ficaria desatualizado; é melhor calcular na hora','Ocupa pouco espaço','O SGBD proíbe','Porque é sigiloso'],c:0,e:'A idade muda todo ano.'},
+  {q:'O atributo que identifica cada cliente e vira PK é o...',o:['Identificador (id)','Derivado','Multivalorado','Composto'],c:0,e:'Identificador = chave.'}],
+ c_fraca:[
+  {q:'Qual é um exemplo de entidade FRACA?',o:['Item do pedido','Cliente','Produto','Barbeiro'],c:0,e:'O item não existe sem o pedido.'},
+  {q:'A chave de uma entidade fraca costuma ser...',o:['A chave da forte + um número próprio (pedido_id, numero_item)','Só o nome','Um texto livre','Não tem chave'],c:0,e:'Ela depende da forte.'},
+  {q:'O que é autorrelacionamento?',o:['A entidade se relaciona com ela mesma','Duas tabelas iguais','Um backup automático','Um JOIN com 3 tabelas'],c:0,e:'Ex.: funcionário supervisiona funcionário.'},
+  {q:'Como fica "um cliente indica outro cliente" no banco?',o:['cliente.indicado_por REFERENCES cliente(id)','Uma tabela indicacao_texto','Uma coluna com o nome de quem indicou','Não dá para fazer'],c:0,e:'FK para a própria tabela.'},
+  {q:'A coluna indicado_por deve ser NOT NULL?',o:['Não: nem todo cliente foi indicado (mínimo 0)','Sim, sempre','Só aos sábados','Precisa ser PK'],c:0,e:'Opcional aceita nulo.'},
+  {q:'Apagaram um pedido. O que pode acontecer com os itens dele?',o:['Vão junto (ON DELETE CASCADE) ou o banco impede apagar','Ficam soltos sem pedido','Viram clientes','Nada, e isso é ótimo'],c:0,e:'Item sem pedido não faz sentido.'}],
+ c_card:[
+  {q:'(0,N) significa...',o:['Nenhum ou muitos','Exatamente um','Pelo menos dois','Zero sempre'],c:0,e:'Mínimo 0, máximo N.'},
+  {q:'"Todo agendamento tem exatamente um cliente" é...',o:['(1,1)','(0,N)','(0,1)','(N,N)'],c:0,e:'Obrigatório e único.'},
+  {q:'Mínimo 1 do lado da FK vira...',o:['FK NOT NULL','FK que aceita nulo','UNIQUE','Tabela nova'],c:0,e:'Obrigatório = NOT NULL.'},
+  {q:'Na notação pé de galinha, o tridente significa...',o:['Muitos','Um','Zero','Erro'],c:0,e:'Tridente = N.'},
+  {q:'Cliente (0,N) Agendamento. Pode existir cliente sem agendamento?',o:['Sim: o mínimo é 0','Não','Só se for VIP','Só no Excel'],c:0,e:'Cadastrou e ainda não marcou.'},
+  {q:'Por que ler a cardinalidade nos dois sentidos?',o:['Cada lado tem o seu mínimo e máximo, e juntos dizem o tipo (1:N, N:N)','Por estética','Porque o SGBD lê de trás para frente','Não precisa'],c:0,e:'Um agendamento → 1 cliente; um cliente → N agendamentos.'}],
+ c_esp:[
+  {q:'PESSOA que se divide em CLIENTE e FUNCIONÁRIO é um caso de...',o:['Generalização/especialização','Entidade fraca','Normalização','Backup'],c:0,e:'Genérica + especializadas.'},
+  {q:'Na especialização, os campos comuns (nome, CPF) ficam na...',o:['Entidade genérica','Especializada','Tabela de backup','View'],c:0,e:'O que é de todos fica em cima.'},
+  {q:'Uma pessoa pode ser cliente E funcionário ao mesmo tempo. A especialização é...',o:['Compartilhada','Exclusiva','Fraca','Derivada'],c:0,e:'Pode ser as duas.'},
+  {q:'"Toda pessoa precisa ser cliente ou funcionário" é especialização...',o:['Total','Parcial','Derivada','Opcional'],c:0,e:'Total = toda genérica é alguma especializada.'},
+  {q:'Pet com cão (porte) e gato (castrado), poucos campos próprios. A forma mais simples de virar tabela é...',o:['Uma tabela pet com a coluna especie','Três bancos diferentes','Uma planilha por bicho','Não guardar a espécie'],c:0,e:'Uma tabela com o tipo.'},
+  {q:'A forma mais organizada de mapear pessoa, cliente e funcionário é...',o:['Uma tabela para cada, com cliente.pessoa_id e funcionario.pessoa_id','Tudo num texto','Repetir o CPF em 5 tabelas sem chave','Nenhuma'],c:0,e:'Genérica + especializadas ligadas por FK.'}],
+ c_map:[
+  {q:'Cada entidade do MER vira...',o:['Uma tabela','Uma coluna','Um backup','Um usuário'],c:0,e:'Regra 1.'},
+  {q:'Relacionamento 1:N: onde vai a FK?',o:['Na tabela do lado N','Na tabela do lado 1','Nas duas','Em nenhuma'],c:0,e:'O agendamento recebe cliente_id.'},
+  {q:'Relacionamento N:N vira...',o:['Uma tabela associativa com as duas FKs','Uma coluna com vírgulas','Duas PKs na mesma tabela','Nada'],c:0,e:'Ex.: aluno_treino.'},
+  {q:'Relacionamento 1:1 vira...',o:['FK em um lado, com UNIQUE','Tabela associativa obrigatória','Nada','Duas FKs em cada lado'],c:0,e:'UNIQUE garante o 1.'},
+  {q:'Atributo do relacionamento N:N (ex.: data_inicio do treino do aluno) fica...',o:['Na tabela associativa','Na tabela aluno','Na tabela treino','No backup'],c:0,e:'É do par aluno-treino.'},
+  {q:'PLANO 1:N ALUNO. Qual tabela recebe plano_id?',o:['aluno','plano','as duas','nenhuma'],c:0,e:'Lado N.'}]
+});
+
+MISSOES.academia={regras:[['Cliente','Academia Força Total. RN01: aluno tem nome, CPF (não repete), telefones e data de nascimento. RN02: cada aluno tem um plano; um plano tem vários alunos. RN03: um aluno faz vários treinos e um treino serve para vários alunos, com a data de início. RN04: um treino tem vários exercícios na ordem certa (o exercício do treino não existe sem o treino). RN05: um aluno pode indicar outro aluno.'],AVISO_ESC],
+ fim:'Modelo da academia pronto. Prepare-se para a Quimera da Cardinalidade.',
+ lista:[
+  {t:'Missão 1 • Entidades e atributos',xp:20,tipo:'chips',txt:'Quais são as ENTIDADES da academia?',ops:['aluno','plano','treino','exercicio','telefone','idade','CPF','indicação'],certo:['aluno','plano','treino','exercicio'],
+   e:'Telefone é multivalorado, idade é derivada, CPF é atributo e indicação é autorrelacionamento.'},
+  {t:'Missão 2 • Classifique',xp:25,txt:'Classifique cada item das regras.',
+   itens:[['telefones do aluno',['multivalorado','derivado','composto'],'multivalorado'],['idade do aluno',['derivado','multivalorado','identificador'],'derivado'],['exercício do treino',['entidade fraca','atributo simples','especialização'],'entidade fraca'],['aluno indica aluno',['autorrelacionamento','N:N com plano','atributo'],'autorrelacionamento'],['aluno e plano',['N:1 (cada aluno 1 plano)','N:N','1:1'],'N:1 (cada aluno 1 plano)'],['aluno e treino',['N:N','1:1','1:N'],'N:N']],
+   e:'Cada classificação vira uma decisão na hora de criar as tabelas.'},
+  {t:'Missão 3 • Mapeamento',xp:30,txt:'Escolha onde cada coisa vai parar no modelo relacional.',
+   itens:[['plano_id',['na tabela aluno','na tabela plano','na tabela treino'],'na tabela aluno'],['data_inicio',['na tabela aluno_treino','na tabela aluno','na tabela plano'],'na tabela aluno_treino'],['telefones',['tabela aluno_telefone','coluna telefones com vírgulas','10 colunas'],'tabela aluno_telefone'],['indicado_por',['aluno, FK para aluno (aceita nulo)','plano, NOT NULL','não guarda'],'aluno, FK para aluno (aceita nulo)'],['PK de treino_exercicio',['(treino_id, ordem)','nome do exercício','não tem'],'(treino_id, ordem)']],
+   e:'Lado N recebe a FK; N:N e multivalorado viram tabela.'},
+  {t:'Escrita • Suas regras',xp:30,tipo:'texto',min:45,chaves:['entidade','atributo','relacionamento','cardinal','pk','fk','chave','tabela','n:n','1:n'],nchaves:3,
+   txt:'A academia pediu uma regra nova: avaliação física (peso, altura e data), feita por um instrutor para um aluno. Escreva a regra RN06, diga se é entidade, quais atributos tem, a cardinalidade com aluno e com instrutor e onde vão as FKs.',
+   e:'Avaliação é entidade (id, peso, altura, data), N:1 com aluno e N:1 com instrutor: as duas FKs ficam na tabela avaliacao.'}]};
+
+CHEFES.quimera={nome:'Quimera da Cardinalidade',cor:'#bc6c25',olho:'#fefae0',selo:'quimera',regras:[['Pedido','Clínica Pet: um tutor tem vários pets; um pet tem um tutor. Uma consulta é de um pet com um veterinário. Na consulta podem ser aplicadas várias vacinas. Os pets são cães ou gatos.']],
+ fim:'A Quimera virou um modelo limpo: tutor 1:N pet, pet 1:N consulta, veterinário 1:N consulta e consulta N:N vacina. Você concluiu o Labirinto do MER!',
+ etapas:[
+  {q:'Cabeça do leão: cardinalidade de TUTOR com PET?',o:['1:N (FK tutor_id em pet)','N:N','1:1','Não se relacionam'],c:0,e:'Um tutor, vários pets.'},
+  {q:'Cabeça da cabra: CONSULTA com VACINA?',o:['N:N, com a tabela consulta_vacina','1:1','1:N com vacina_id em consulta','Vacina é atributo de texto'],c:0,e:'Várias vacinas por consulta, cada vacina em várias consultas.'},
+  {tipo:'chips',q:'Cabeça da serpente: onde estão as FKs?',ops:['pet.tutor_id','consulta.pet_id','consulta.veterinario_id','consulta_vacina.consulta_id','consulta_vacina.vacina_id','tutor.pet_id','vacina.consulta_id'],certo:['pet.tutor_id','consulta.pet_id','consulta.veterinario_id','consulta_vacina.consulta_id','consulta_vacina.vacina_id'],e:'A FK sempre no lado N ou na associativa.'},
+  {q:'Golpe final: cão e gato. Como modelar?',o:['Especialização de PET; uma tabela pet com a coluna especie resolve','Duas clínicas','Uma tabela por pet','Ignorar a espécie'],c:0,e:'Generalização/especialização.'}]};
+
+// ---------------------------------------------------------------- definição dos níveis
+const L_ARQ={id:'arquiteto',antes:'facil',nome:'Arquiteto',titulo:'A Torre do Servidor',aula:'Arquitetura do SGBD, armazenamento, transações e tipos de banco',bioma:'nuvem',codigo:'SERVIDOR',
+ ind:'Ind. 1: definir a arquitetura de banco de dados de acordo com a modelagem',
+ fases:[
+ {nome:'Cidade Cliente-Servidor',hist:[
+  _hist('Engenheira de Redes','#1d3557','servidor','A barbearia cresceu. O sistema agora roda em vários computadores, mas o banco precisa ser UM só. Bem-vindo à arquitetura cliente-servidor.','Cliente (DBeaver, app, Python)\n      │  SQL pela rede\n      ▼\nServidor PostgreSQL : porta 5432'),
+  _hist('Engenheira de Redes','#1d3557','pc','Na Torre das Camadas você vai ver por que a tela nunca fala direto com o banco.')],
+  lugares:{
+   praca:{x:70,y:60,nome:'Praça Cliente-Servidor',ic:'vila',tipo:'batalha',card:CA_CS,npc:'Engenheira de Redes',npcCor:'#1d3557',fala:'O Fantasma do Pen Drive acha que cada computador deve ter o seu banco. Mostre como funciona um servidor.',inimigo:['Fantasma do Pen Drive','#e0e1dd','#415a77'],qs:'a_cs'},
+   camadas:{x:240,y:130,nome:'Torre das Camadas',ic:'torre',tipo:'batalha',card:CA_CAM,npc:'Arquiteta de Software',npcCor:'#e76f51',fala:'O Golem Monolito juntou tela, regra e banco num bloco só. Separe as camadas.',inimigo:['Golem Monolito','#6c757d','#ffb703'],qs:'a_cam'}},
+  pre:{praca:[],camadas:['praca']},edges:[['praca','camadas']],saida:'camadas'},
+ {nome:'Distrito do Catálogo',hist:[
+  _hist('Bibliotecário do Sistema','#6d597a','livro','Um servidor PostgreSQL é como um prédio: andares (bancos), salas (schemas) e armários (tabelas). E existe um catálogo que sabe onde está cada coisa.',"SELECT table_name\nFROM information_schema.tables\nWHERE table_schema = 'public';"),
+  _hist('Bibliotecário do Sistema','#6d597a','ram','No Armazém do Disco, você descobre como o SGBD usa disco, memória, log e índice.')],
+  lugares:{
+   hierarquia:{x:60,y:120,nome:'Salão da Hierarquia',ic:'templo',tipo:'batalha',card:CA_HIER,npc:'Bibliotecário do Sistema',npcCor:'#6d597a',fala:'O Labirinto Sem Placas confundiu banco, schema e tabela. Coloque cada um no seu andar.',inimigo:['Labirinto Sem Placas','#4a4e69','#f2e9e4'],qs:'a_hier'},
+   armazem:{x:240,y:60,nome:'Armazém do Disco',ic:'caverna',tipo:'batalha',card:CA_ARM,npc:'Guarda do Armazém',npcCor:'#8d99ae',fala:'O Verme da Corrupção ataca quando a luz cai. Mostre como o SGBD se protege.',inimigo:['Verme da Corrupção','#606c38','#d62828'],qs:'a_arm'}},
+  pre:{hierarquia:[],armazem:['hierarquia']},edges:[['hierarquia','armazem']],saida:'armazem'},
+ {nome:'Vale das Transações',hist:[
+  _hist('Monge do ACID','#2a9d8f','balanca','Aqui se aprende a lei mais antiga dos bancos: tudo ou nada. É a transação.','BEGIN;\nINSERT INTO agendamento ...;\nINSERT INTO agendamento_servico ...;\nCOMMIT;   -- ou ROLLBACK;'),
+  _hist('Mercadora','#f4a261','mapa','No Mercado dos SGBDs você compara relacional, NoSQL e nuvem, e aprende a escolher.')],
+  lugares:{
+   fonte:{x:70,y:60,nome:'Fonte do ACID',ic:'poco',tipo:'batalha',card:CA_ACID,npc:'Monge do ACID',npcCor:'#2a9d8f',fala:'O Espectro da Metade grava as coisas pela metade. Use a transação.',inimigo:['Espectro da Metade','#9d4edd','#e0aaff'],qs:'a_acid'},
+   mercadosgbd:{x:200,y:140,nome:'Mercado dos SGBDs',ic:'mercado',tipo:'batalha',card:CA_TIPOS,npc:'Mercadora',npcCor:'#f4a261',fala:'O Vendedor de Modinha quer um banco de grafos para a barbearia. Mostre como escolher.',inimigo:['Vendedor de Modinha','#ff006e','#ffbe0b'],qs:'a_tipos'}},
+  pre:{fonte:[],mercadosgbd:['fonte']},edges:[['fonte','mercadosgbd']],saida:'mercadosgbd'},
+ {nome:'Conselho da Arquitetura',hist:[
+  _hist('Seu Jair','#d62828','barbearia','Abri duas filiais! Quero que as três lojas e um aplicativo usem a mesma agenda. Você desenha a arquitetura?'),
+  _hist('Arquiteta de Software','#e76f51','servidor','Monte a arquitetura na Mesa do Arquiteto e depois enfrente o Titã que derrubou as filiais.')],
+  lugares:{
+   mesaarq:{x:240,y:130,nome:'Mesa do Arquiteto',ic:'atelie',tipo:'missoes',miss:'arquitetura',npc:'Arquiteta de Software',npcCor:'#e76f51',fala:'Peças, servidor e justificativa: o projeto é seu.'},
+   tita:{x:80,y:60,nome:'Fortaleza do Titã',ic:'castelo',tipo:'chefao',chefe:'tita',codigo:'ACID',npc:'Sentinela',npcCor:'#1d3557',fala:'O Titã do Servidor Caído espalhou bancos por todo lado. Enfrentem em equipe.'}},
+  pre:{mesaarq:[],tita:['mesaarq']},edges:[['mesaarq','tita']]}]};
+
+const L_CART={id:'cartografo',antes:'medio',nome:'Cartógrafo',titulo:'O Labirinto do MER',aula:'Requisitos, tipos de atributo, cardinalidade, especialização e mapeamento',bioma:'outono',codigo:'CARDINAL',
+ ind:'Ind. 2 e 4: planejar pelas regras de negócio e modelar o banco',
+ fases:[
+ {nome:'Aldeia dos Requisitos',hist:[
+  _hist('Cartógrafa','#bc6c25','caderno','Todo mapa começa com perguntas. Antes do MER, descubra o que o cliente precisa: entrevista, questionário, observação e documentos.'),
+  _hist('Cartógrafa','#bc6c25','cartorio','Depois, cada frase do cliente vira peça do modelo: substantivo vira entidade, verbo vira relacionamento, "obrigatório" vira NOT NULL.')],
+  lugares:{
+   tenda:{x:70,y:60,nome:'Tenda da Entrevista',ic:'casa',tipo:'batalha',card:CC_LEV,npc:'Cartógrafa',npcCor:'#bc6c25',fala:'O Mudo das Respostas Vagas só diz "quero um sistema". Faça as perguntas certas.',inimigo:['Mudo das Respostas Vagas','#a5a58d','#6b705c'],qs:'c_lev'},
+   mural:{x:240,y:130,nome:'Mural das Regras',ic:'cartorio',tipo:'batalha',card:CC_RN,npc:'Escrivã',npcCor:'#606c38',fala:'O Embaralhador trocou entidades por atributos. Leia as regras e ponha ordem.',inimigo:['Embaralhador','#dda15e','#283618'],qs:'c_rn'}},
+  pre:{tenda:[],mural:['tenda']},edges:[['tenda','mural']],saida:'mural'},
+ {nome:'Bosque dos Atributos',hist:[
+  _hist('Jardineiro','#588157','floresta','No Bosque, cada árvore é um atributo: simples, composto, multivalorado, derivado ou identificador.','cliente(id, nome, rua, numero, bairro, nascimento)\ncliente_telefone(cliente_id, telefone)'),
+  _hist('Jardineiro','#588157','chave','Na Gruta, vivem as entidades que dependem de outras e as que se ligam a si mesmas.')],
+  lugares:{
+   arvore:{x:60,y:120,nome:'Árvore dos Atributos',ic:'floresta',tipo:'batalha',card:CC_ATR,npc:'Jardineiro',npcCor:'#588157',fala:'A Erva Vírgula enfia três telefones numa célula só. Arranque ela pela raiz.',inimigo:['Erva Vírgula','#90a955','#31572c'],qs:'c_atr'},
+   gruta:{x:240,y:60,nome:'Gruta da Entidade Fraca',ic:'caverna',tipo:'batalha',card:CC_FRACA,npc:'Eremita',npcCor:'#7f5539',fala:'O Órfão sem Pedido quer existir sozinho. Mostre quem depende de quem.',inimigo:['Órfão sem Pedido','#b08968','#432818'],qs:'c_fraca'}},
+  pre:{arvore:[],gruta:['arvore']},edges:[['arvore','gruta']],saida:'gruta'},
+ {nome:'Desfiladeiro da Cardinalidade',hist:[
+  _hist('Guia da Montanha','#9c6644','mer','No Desfiladeiro, cada ponte tem duas placas: o mínimo e o máximo de cada lado. Leia as duas antes de atravessar.','AGENDAMENTO (1,1) ── CLIENTE\nCLIENTE     (0,N) ── AGENDAMENTO'),
+  _hist('Guia da Montanha','#9c6644','dupla','Na Torre da Especialização, uma entidade genérica se divide em especializadas.')],
+  lugares:{
+   pontecard:{x:70,y:60,nome:'Ponte da Cardinalidade',ic:'ponte',tipo:'batalha',card:CC_CARD,npc:'Guia da Montanha',npcCor:'#9c6644',fala:'O Troll do Zero ou Um cobra pedágio de quem não sabe ler (mín, máx).',inimigo:['Troll do Zero ou Um','#7f4f24','#ffe8d6'],qs:'c_card'},
+   torreesp:{x:200,y:140,nome:'Torre da Especialização',ic:'torre',tipo:'batalha',card:CC_ESP,npc:'Taxonomista',npcCor:'#6f1d1b',fala:'O Camaleão Genérico vira tudo e não é nada. Separe o genérico do especializado.',inimigo:['Camaleão Genérico','#43aa8b','#f94144'],qs:'c_esp'}},
+  pre:{pontecard:[],torreesp:['pontecard']},edges:[['pontecard','torreesp']],saida:'torreesp'},
+ {nome:'Cartório do Mapeamento',hist:[
+  _hist('Tabeliã','#344e41','tabela','No Cartório, o desenho vira tabela. São cinco regras de mapeamento e nenhuma exceção.','1:N  → FK no lado N\nN:N  → tabela associativa\n1:1  → FK com UNIQUE'),
+  _hist('Tabeliã','#344e41','mapa','Depois, a Academia Força Total precisa do seu mapa. E a Quimera espera no fim do labirinto.')],
+  lugares:{
+   mesamap:{x:250,y:140,nome:'Mesa do Mapeamento',ic:'cartorio',tipo:'batalha',card:CC_MAP,npc:'Tabeliã',npcCor:'#344e41',fala:'O Fiscal das Chaves Perdidas devolve toda FK no lugar errado. Mostre as regras.',inimigo:['Fiscal das Chaves Perdidas','#3a5a40','#dad7cd'],qs:'c_map'},
+   academia:{x:170,y:60,nome:'Academia Força Total',ic:'atelie',tipo:'missoes',miss:'academia',npc:'Dona Rô',npcCor:'#e63946',fala:'Minha academia ainda é tudo em papel. Me ajuda a modelar?'},
+   quimera:{x:50,y:120,nome:'Covil da Quimera',ic:'covil',tipo:'chefao',chefe:'quimera',codigo:'QUIMERA',npc:'Sentinela',npcCor:'#6f1d1b',fala:'A Quimera da Cardinalidade tem três cabeças. Enfrentem em equipe.'}},
+  pre:{mesamap:[],academia:['mesamap'],quimera:['academia']},edges:[['mesamap','academia'],['academia','quimera']]}]};
+// ===================== NÍVEIS NOVOS (23/11): Minerador e Guardião + registro =====================
+const MIN_DADOS=BARB_DADOS+"\nINSERT INTO cliente VALUES (7,'Gabriel Nunes','93333-7777',NULL),(8,'Helena Souza','92222-8888',NULL);";
+const MIN_SETUP=BARB_DDL+'\n'+MIN_DADOS;
+const REGRAS_MIN=[['Banco','Barbearia com 8 clientes (Gabriel e Helena ainda não agendaram e não informaram o nascimento), 3 barbeiros, 4 serviços, 8 agendamentos e os serviços de cada agendamento.'],['Dica','Use 📂 Fonte de dados para ver as tabelas antes de escrever. ▶ Executar mostra o resultado sem gastar tentativa.']];
+
+// ---------------------------------------------------------------- MINERADOR (Ind. 3 e 5)
+const CM_OP=_card({t:'Filtros e operadores do SELECT',p:[
+ 'DISTINCT tira as linhas repetidas do resultado: SELECT DISTINCT data FROM agendamento;',
+ "LIKE procura por padrão de texto: % é qualquer sequência e _ é um caractere. nome LIKE 'Ana%' (começa com Ana); nome LIKE '%Souza' (termina com Souza). No PostgreSQL, ILIKE ignora maiúsculas.",
+ 'IN testa uma lista: barbeiro_id IN (1, 3). BETWEEN testa uma faixa, incluindo as pontas: preco BETWEEN 20 AND 35.',
+ 'IS NULL e IS NOT NULL procuram campos vazios. Nunca use = NULL: nada é igual a NULL, nem o próprio NULL.',
+ 'AND, OR e NOT combinam condições (use parênteses quando misturar). ORDER BY ordena; LIMIT mostra só as primeiras linhas; AS dá apelido à coluna.'],
+ ex:"SELECT nome FROM cliente WHERE nascimento IS NULL ORDER BY nome LIMIT 5;"});
+const CM_AGG=_card({t:'Funções de agregação e CASE',p:[
+ 'COUNT(*) conta linhas; COUNT(coluna) conta só onde a coluna não é nula. SUM soma, AVG tira a média, MIN e MAX acham o menor e o maior.',
+ 'Sem GROUP BY, a função resume a tabela inteira numa linha. Com GROUP BY, resume cada grupo.',
+ 'Toda coluna do SELECT que não está dentro de uma função precisa estar no GROUP BY.',
+ 'HAVING filtra depois de agrupar: HAVING COUNT(*) > 2. WHERE filtra antes.',
+ "CASE cria uma coluna com condição: CASE WHEN preco >= 35 THEN 'caro' ELSE 'barato' END AS faixa. ROUND(AVG(preco), 2) arredonda."],
+ ex:'SELECT MIN(preco), MAX(preco), AVG(preco) FROM servico; responde em uma linha o menor, o maior e a média dos preços.'});
+const CM_JOIN=_card({t:'LEFT JOIN, subconsulta e UNION',p:[
+ 'INNER JOIN (ou só JOIN) mostra só as linhas que têm par nas duas tabelas.',
+ 'LEFT JOIN mostra TODAS as linhas da tabela da esquerda, mesmo sem par. Onde não há par, as colunas da direita vêm NULL. É assim que se acha "quem nunca agendou": LEFT JOIN ... WHERE a.id IS NULL.',
+ 'RIGHT JOIN faz o contrário e FULL JOIN mostra tudo dos dois lados.',
+ 'SUBCONSULTA é um SELECT dentro de outro: WHERE preco > (SELECT AVG(preco) FROM servico). Também aparece com IN: WHERE id IN (SELECT cliente_id FROM agendamento).',
+ 'UNION junta o resultado de dois SELECTs com as mesmas colunas, sem repetir (UNION ALL mantém as repetições).'],
+ ex:'SELECT c.nome FROM cliente c LEFT JOIN agendamento a ON a.cliente_id = c.id WHERE a.id IS NULL;'});
+const CM_IDX=_card({t:'Índices, views e transações na prática',p:[
+ 'CREATE INDEX idx_agendamento_data ON agendamento(data); acelera buscas e ordenações por data. Índice demais deixa INSERT e UPDATE mais lentos: crie onde a consulta pesa.',
+ 'EXPLAIN SELECT ... mostra o plano do SGBD: se ele lê a tabela inteira (Seq Scan) ou usa o índice (Index Scan).',
+ 'CREATE VIEW nome AS SELECT ...; salva uma consulta com nome. Quem usa a view não precisa saber o JOIN.',
+ 'Na prática, a transação protege operações com mais de um comando: BEGIN; ...; COMMIT; ou ROLLBACK; se algo deu errado.',
+ 'SERIAL cria uma SEQUÊNCIA que gera o próximo id sozinho. Por isso no INSERT não informamos o id.'],
+ ex:'BEGIN; DELETE FROM agendamento_servico WHERE agendamento_id = 1 AND servico_id = 2; INSERT INTO agendamento_servico VALUES (1, 4, 15); COMMIT;'});
+
+Object.assign(Q,{
+ n_op:[
+  {q:"Qual filtro acha os nomes que COMEÇAM com 'Ana'?",o:["nome LIKE 'Ana%'","nome LIKE '%Ana'","nome = 'Ana%'","nome IN 'Ana'"],c:0,e:'% depois do texto = qualquer coisa depois.'},
+  {q:'Como achar clientes SEM data de nascimento?',o:['WHERE nascimento IS NULL','WHERE nascimento = NULL','WHERE nascimento = 0',"WHERE nascimento = ''"],c:0,e:'NULL só com IS NULL.'},
+  {q:'preco BETWEEN 20 AND 35 inclui um serviço de 35 reais?',o:['Sim, BETWEEN inclui as pontas','Não','Só se for ORDER BY','Depende do dia'],c:0,e:'Equivale a preco >= 20 AND preco <= 35.'},
+  {q:'Para mostrar as datas de agendamento sem repetir, use...',o:['SELECT DISTINCT data FROM agendamento','SELECT UNIQUE data','SELECT data NO REPEAT','GROUP data'],c:0,e:'DISTINCT tira repetidos.'},
+  {q:'barbeiro_id IN (1, 3) é o mesmo que...',o:['barbeiro_id = 1 OR barbeiro_id = 3','barbeiro_id = 1 AND barbeiro_id = 3','barbeiro_id BETWEEN 1 AND 3','barbeiro_id = 13'],c:0,e:'IN é uma lista de OR.'},
+  {q:'Para ver só os 3 serviços mais caros:',o:['ORDER BY preco DESC LIMIT 3','ORDER BY preco LIMIT 3','LIMIT 3 ORDER BY preco','TOP DESC 3'],c:0,e:'Ordena do maior e corta em 3.'}],
+ n_agg:[
+  {q:'COUNT(*) e COUNT(nascimento) podem dar números diferentes?',o:['Sim: COUNT(coluna) não conta os nulos','Não, nunca','Só no Excel','Só se a tabela estiver vazia'],c:0,e:'Gabriel e Helena têm nascimento nulo.'},
+  {q:'Qual função dá a média dos preços?',o:['AVG(preco)','SUM(preco)','MEAN(preco)','MID(preco)'],c:0,e:'AVG = average.'},
+  {q:'SELECT barbeiro_id, COUNT(*) FROM agendamento ... o que falta?',o:['GROUP BY barbeiro_id','ORDER BY COUNT','HAVING barbeiro_id','DISTINCT'],c:0,e:'Coluna fora da função vai no GROUP BY.'},
+  {q:'Barbeiros com MAIS DE 2 agendamentos. Onde vai o COUNT(*) > 2?',o:['No HAVING','No WHERE','No FROM','No ORDER BY'],c:0,e:'HAVING filtra grupos.'},
+  {q:"CASE WHEN preco >= 35 THEN 'caro' ELSE 'barato' END serve para...",o:['Criar uma coluna com valor conforme a condição','Apagar os caros','Mudar o preço','Criar uma tabela'],c:0,e:'CASE é o "se" do SQL.'},
+  {q:'ROUND(AVG(preco), 2) faz o quê?',o:['Arredonda a média para 2 casas','Soma 2 ao preço','Mostra 2 linhas','Divide por 2'],c:0,e:'Relatório com cara de dinheiro.'}],
+ n_join:[
+  {q:'Para listar TODOS os clientes, inclusive os que nunca agendaram, use...',o:['LEFT JOIN de cliente com agendamento','INNER JOIN','UNION','DELETE'],c:0,e:'LEFT mantém todos da esquerda.'},
+  {q:'No LEFT JOIN, o cliente sem agendamento aparece com as colunas do agendamento...',o:['NULL','zeradas','repetidas do cliente anterior','não aparece'],c:0,e:'Sem par = NULL.'},
+  {q:'Como achar os clientes que NUNCA agendaram?',o:['LEFT JOIN ... WHERE a.id IS NULL','INNER JOIN ... WHERE a.id IS NULL','SELECT * FROM agendamento','DROP TABLE cliente'],c:0,e:'Só quem ficou sem par.'},
+  {q:'WHERE preco > (SELECT AVG(preco) FROM servico) é um exemplo de...',o:['Subconsulta','JOIN','View','Índice'],c:0,e:'SELECT dentro de SELECT.'},
+  {q:'UNION exige que os dois SELECTs...',o:['Tenham as mesmas colunas (quantidade e tipos)','Sejam da mesma tabela','Tenham WHERE','Tenham GROUP BY'],c:0,e:'Ele empilha os resultados.'},
+  {q:'INNER JOIN de cliente com agendamento mostra o Gabriel, que nunca agendou?',o:['Não: só quem tem par','Sim, com NULL','Sim, duas vezes','Só se ordenar'],c:0,e:'Para mostrar, LEFT JOIN.'}],
+ n_idx:[
+  {q:'Para que serve CREATE INDEX?',o:['Acelerar buscas e ordenações numa coluna','Fazer backup','Criar usuário','Apagar repetidos'],c:0,e:'Como o índice do livro.'},
+  {q:'Por que não criar índice em todas as colunas?',o:['Índice deixa INSERT e UPDATE mais lentos e ocupa espaço','O SGBD proíbe','Índice apaga dados','Porque é pago'],c:0,e:'Crie onde a consulta pesa.'},
+  {q:'O que o EXPLAIN mostra?',o:['O plano que o SGBD vai usar para executar a consulta','A senha do banco','O backup','O MER'],c:0,e:'Seq Scan × Index Scan.'},
+  {q:'Uma VIEW guarda...',o:['Uma consulta com nome','Uma cópia física de todos os dados','Um usuário','Uma senha'],c:0,e:'É uma consulta salva.'},
+  {q:'Trocar um serviço do agendamento exige um DELETE e um INSERT. Como garantir os dois?',o:['Dentro de uma transação: BEGIN ... COMMIT','Rodar em dias diferentes','Sem WHERE','Com DROP'],c:0,e:'Tudo ou nada.'},
+  {q:'Por que não informamos o id num INSERT quando a coluna é SERIAL?',o:['A sequência gera o próximo número sozinha','Porque id é proibido','Porque o id é sempre zero','Porque a tabela não tem PK'],c:0,e:'SERIAL = sequência automática.'}]
+});
+
+const sq=(t,xp,txt,modelo,gab,e,extra)=>Object.assign({t,xp,tipo:'sql',setup:MIN_SETUP,modo:'select',txt,modelo,gab,e},extra||{});
+MISSOES.mina_filtros={regras:REGRAS_MIN,fim:'Filtros dominados! Desça para a Câmara das Funções.',
+ lista:[
+  sq('SQL 1 • LIKE',25,"Mostre só o NOME dos clientes cujo sobrenome termina em 'Souza'.",'SELECT nome\nFROM cliente\nWHERE nome LIKE ...;',"SELECT nome FROM cliente WHERE nome LIKE '%Souza'","WHERE nome LIKE '%Souza' → Ana Souza e Helena Souza."),
+  sq('SQL 2 • IS NULL',25,'Quais clientes não informaram a data de nascimento? Mostre o nome e o telefone.','SELECT nome, telefone\nFROM cliente\nWHERE ...;','SELECT nome, telefone FROM cliente WHERE nascimento IS NULL','IS NULL, nunca = NULL. Gabriel e Helena.'),
+  sq('SQL 3 • BETWEEN',25,'Mostre o nome e o preço dos serviços que custam de 20 a 35 reais (inclusive).','SELECT nome, preco\nFROM servico\nWHERE preco BETWEEN ...;','SELECT nome, preco FROM servico WHERE preco BETWEEN 20 AND 35','Corte (35) e Barba (25): o BETWEEN inclui as pontas.'),
+  sq('SQL 4 • DISTINCT e ORDER BY',30,'Em quais datas houve agendamento? Mostre cada data uma vez só, da mais antiga para a mais nova.','SELECT DISTINCT ...\nFROM agendamento\nORDER BY ...;','SELECT DISTINCT data FROM agendamento ORDER BY data','16, 17 e 18 de novembro.',{ordem:true})]};
+MISSOES.mina_relatorios={regras:REGRAS_MIN,fim:'Relatórios prontos! Os Túneis dos JOINs esperam.',
+ lista:[
+  sq('SQL 5 • COUNT com GROUP BY',30,'Quantos agendamentos cada cliente tem? Mostre o nome do cliente e a quantidade (só quem tem agendamento).','SELECT c.nome, COUNT(*) AS qtd\nFROM agendamento a\nJOIN cliente c ON ...\nGROUP BY ...;','SELECT c.nome, COUNT(*) FROM agendamento a JOIN cliente c ON c.id=a.cliente_id GROUP BY c.nome','Ana 2, Bia 2 e os outros 1.'),
+  sq('SQL 6 • HAVING',35,'Quais barbeiros têm MAIS DE 2 agendamentos? Mostre o nome do barbeiro e o total.','SELECT b.nome, COUNT(*) AS total\nFROM agendamento a\nJOIN barbeiro b ON ...\nGROUP BY ...\nHAVING ...;','SELECT b.nome, COUNT(*) FROM agendamento a JOIN barbeiro b ON b.id=a.barbeiro_id GROUP BY b.nome HAVING COUNT(*) > 2','Carlos Silva e Rui Mendes, com 3 cada. A Jéssica tem 2 e ficou de fora.'),
+  sq('SQL 7 • MIN, MAX e AVG',30,'Em UMA linha: o menor preço, o maior preço e a média de preço dos serviços (nessa ordem).','SELECT MIN(...), MAX(...), AVG(...)\nFROM servico;','SELECT MIN(preco), MAX(preco), AVG(preco) FROM servico','15, 40 e 28,75.',{ordem:true}),
+  sq('SQL 8 • CASE',35,"Mostre o nome, o preço e uma coluna faixa com 'caro' quando o preço for 35 ou mais e 'barato' nos outros casos.","SELECT nome, preco,\n  CASE WHEN ... THEN 'caro' ELSE 'barato' END AS faixa\nFROM servico;","SELECT nome, preco, CASE WHEN preco >= 35 THEN 'caro' ELSE 'barato' END FROM servico",'Corte e Pigmentação caros; Barba e Sobrancelha baratos.')]};
+MISSOES.mina_profunda={regras:REGRAS_MIN,fim:'Os túneis se abriram. Falta a Câmara da Transação.',
+ lista:[
+  sq('SQL 9 • LEFT JOIN',40,'Quais clientes NUNCA fizeram agendamento? Mostre só o nome.','SELECT c.nome\nFROM cliente c\nLEFT JOIN agendamento a ON ...\nWHERE ...;','SELECT c.nome FROM cliente c LEFT JOIN agendamento a ON a.cliente_id=c.id WHERE a.id IS NULL','Gabriel Nunes e Helena Souza. (Também vale NOT IN com subconsulta.)'),
+  sq('SQL 10 • Subconsulta',40,'Mostre o nome e o preço dos serviços que custam MAIS que a média de preço dos serviços.','SELECT nome, preco\nFROM servico\nWHERE preco > (SELECT ... FROM servico);','SELECT nome, preco FROM servico WHERE preco > (SELECT AVG(preco) FROM servico)','A média é 28,75: Corte e Pigmentação.'),
+  sq('SQL 11 • JOIN com 3 tabelas e soma',45,'Quanto cada CLIENTE já gastou? Mostre o nome do cliente e a soma do preco_cobrado, do maior para o menor (só quem tem agendamento).','SELECT c.nome, SUM(i.preco_cobrado) AS gasto\nFROM agendamento_servico i\nJOIN agendamento a ON ...\nJOIN cliente c ON ...\nGROUP BY ...\nORDER BY ... DESC;','SELECT c.nome, SUM(i.preco_cobrado) AS g FROM agendamento_servico i JOIN agendamento a ON a.id=i.agendamento_id JOIN cliente c ON c.id=a.cliente_id GROUP BY c.nome ORDER BY g DESC, c.nome','Ana 95 no topo. Se dois empatarem, a ordem entre eles não importa para o Seu Jair, mas use ORDER BY total DESC, nome.')]};
+MISSOES.mina_transacao={regras:REGRAS_MIN,fim:'Câmara aberta! Agora, o Basilisco do Relatório.',
+ lista:[
+  {t:'SQL 12 • Transação',xp:45,tipo:'sql',setup:MIN_SETUP,modo:'livre',valida:'vTransacao',
+   txt:'No agendamento 1, a Ana trocou a barba (serviço 2) pela sobrancelha (serviço 4, preço 15). Faça a troca DENTRO DE UMA TRANSAÇÃO: comece com BEGIN, apague a barba, insira a sobrancelha e termine com COMMIT.',
+   modelo:'BEGIN;\nDELETE FROM agendamento_servico\nWHERE ...;\nINSERT INTO agendamento_servico VALUES (...);\nCOMMIT;',
+   e:'Com BEGIN e COMMIT, o DELETE e o INSERT acontecem juntos ou nenhum acontece.'},
+  {t:'SQL 13 • VIEW e índice',xp:45,tipo:'sql',setup:MIN_SETUP,
+   txt:'Crie a VIEW faturamento_barbeiro com as colunas nome e total (soma do preco_cobrado por barbeiro) e um índice idx_agendamento_data na coluna data da tabela agendamento.',
+   modelo:'CREATE VIEW faturamento_barbeiro AS\nSELECT b.nome, SUM(i.preco_cobrado) AS total\nFROM ...\nGROUP BY b.nome;\n\nCREATE INDEX idx_agendamento_data ON ...;',
+   testes:[{d:'a view faturamento_barbeiro existe e tem 3 barbeiros',sql:'SELECT 1 FROM faturamento_barbeiro',espera:3},
+    {d:'as colunas se chamam nome e total, e o Carlos Silva tem 130',sql:"SELECT 1 FROM faturamento_barbeiro WHERE nome='Carlos Silva' AND total=130",espera:1},
+    {d:'o índice idx_agendamento_data existe',sql:"SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_agendamento_data'",espera:1}],
+   e:'A view esconde o JOIN; o índice acelera a busca por data.'}]};
+function vTransacao(db,txt){const er=[];const t=txt.toUpperCase();if(!/\bBEGIN\b|START\s+TRANSACTION/.test(t))er.push('Comece a transação com BEGIN;');if(!/\bCOMMIT\b/.test(t))er.push('Confirme no final com COMMIT;');
+ try{const a=db.exec('SELECT 1 FROM agendamento_servico WHERE agendamento_id=1 AND servico_id=2');if(a.length&&a[0].values.length)er.push('A barba (serviço 2) ainda está no agendamento 1.');
+  const b=db.exec('SELECT preco_cobrado FROM agendamento_servico WHERE agendamento_id=1 AND servico_id=4');if(!b.length||!b[0].values.length)er.push('A sobrancelha (serviço 4) não entrou no agendamento 1.');else if(Number(b[0].values[0][0])!==15)er.push('O preço cobrado da sobrancelha deve ser 15.');
+  const c=db.exec('SELECT COUNT(*) FROM agendamento_servico');if(c[0].values[0][0]!==11)er.push('Só a troca deveria acontecer: confira se apagou ou inseriu algo a mais.')}catch(e){er.push('Erro ao conferir: '+erroPt(e))}
+ return er}
+if(typeof window!=='undefined')window.vTransacao=vTransacao;
+
+CHEFES.basilisco={nome:'Basilisco do Relatório',cor:'#386641',olho:'#f2e8cf',selo:'basilisco',regras:[['Pedido','O contador do Seu Jair quer um relatório por barbeiro, inclusive de quem não atendeu ninguém no mês.']],
+ fim:'O Basilisco virou pedra diante do seu SELECT. Você concluiu as Minas do SELECT!',
+ etapas:[
+  {q:'Um barbeiro novo não atendeu ninguém e sumiu do relatório. Por quê?',o:['O relatório usou INNER JOIN, que só mostra quem tem par','O barbeiro foi apagado','O GROUP BY apaga linhas','Falta de índice'],c:0,e:'Para aparecer, LEFT JOIN a partir de barbeiro.'},
+  {q:'Qual consulta mostra TODOS os barbeiros com a quantidade de atendimentos?',o:['SELECT b.nome, COUNT(a.id) FROM barbeiro b LEFT JOIN agendamento a ON a.barbeiro_id = b.id GROUP BY b.nome;','SELECT b.nome, COUNT(*) FROM agendamento a JOIN barbeiro b ON b.id = a.barbeiro_id;','SELECT * FROM barbeiro WHERE COUNT > 0;','SELECT COUNT(barbeiro);'],c:0,e:'COUNT(a.id) dá 0 para quem não tem par.'},
+  {tipo:'chips',q:'O relatório ficou lento com 100 mil agendamentos. O que ajuda?',ops:['índice em agendamento(barbeiro_id)','índice em agendamento(data)','VIEW com o relatório pronto para o contador','apagar os agendamentos antigos sem backup','tirar a chave primária'],certo:['índice em agendamento(barbeiro_id)','índice em agendamento(data)','VIEW com o relatório pronto para o contador'],e:'Índice nas colunas usadas e view para facilitar.'},
+  {q:'Golpe final: ao lançar o pagamento do mês, um UPDATE deu erro no meio. O que fazer?',o:['ROLLBACK, corrigir e rodar a transação de novo','COMMIT assim mesmo','Desligar o servidor','Apagar a tabela'],c:0,e:'Nada pela metade.'}]};
+
+// ---------------------------------------------------------------- GUARDIÃO (Ind. 5 e 6)
+const CG_TESTE=_card({t:'Testes de persistência',p:[
+ 'Avaliar a persistência é provar que o dado foi GRAVADO, continua lá e volta certo. Não basta "parecer que funcionou".',
+ 'PLANO DE TESTE: para cada caso, escreva a ação, a ENTRADA, o RESULTADO ESPERADO e, depois, o RESULTADO OBTIDO (passou ou falhou).',
+ 'Teste o caminho feliz (cadastro válido grava) e os caminhos tristes: o banco DEVE RECUSAR telefone repetido (UNIQUE), preço negativo (CHECK), campo obrigatório vazio (NOT NULL) e FK para quem não existe.',
+ 'Teste de persistência de verdade: grave pelo sistema, feche o programa (ou reinicie o servidor), abra de novo e consulte. O dado precisa estar lá.',
+ 'Registre tudo num relatório: prints, consultas usadas, o que falhou e o que foi corrigido.'],
+ ex:"Caso 3: INSERT de cliente com o telefone '99999-1111' (já existe). Esperado: erro de UNIQUE. Obtido: erro de UNIQUE. Passou."});
+const CG_ROLE=_card({t:'Usuários, papéis e permissões',p:[
+ 'No PostgreSQL, usuários e grupos são ROLES. CREATE ROLE caixa LOGIN PASSWORD \'****\'; cria um usuário que pode entrar.',
+ 'GRANT dá permissão e REVOKE tira: GRANT SELECT, INSERT ON agendamento TO caixa; REVOKE DELETE ON cliente FROM caixa;',
+ 'Grupo: crie um papel sem login (atendimento), dê as permissões a ele e coloque as pessoas dentro: GRANT atendimento TO maria;',
+ 'PRINCÍPIO DO MENOR PRIVILÉGIO: cada um recebe só o que precisa. O sistema nunca usa o superusuário postgres.',
+ 'Também dá para limitar por coluna (GRANT SELECT (nome, telefone) ON cliente TO relatorio;) e mostrar só uma parte dos dados com uma VIEW.'],
+ ex:'Caixa: SELECT e INSERT em agendamento. Contador: só SELECT na view de faturamento. Dono: tudo, mas com senha forte.'});
+const CG_LGPD=_card({t:'Sigilo e LGPD no banco',p:[
+ 'A LGPD (Lei 13.709/2018) protege os dados pessoais. Nome, telefone, CPF e endereço são DADOS PESSOAIS. Saúde, religião, biometria e origem racial são DADOS SENSÍVEIS.',
+ 'Guarde só o necessário (minimização) e para um motivo claro (finalidade). O cliente tem direito de ver, corrigir e pedir para apagar os dados dele.',
+ 'Proteja: permissões mínimas, senhas fortes, conexão criptografada, backup protegido e registro de quem acessou (log).',
+ 'MASCARAMENTO e ANONIMIZAÇÃO: em relatórios e testes, mostre 9****-1111 ou use dados falsos. Banco de teste nunca deve ter dados reais.',
+ 'Vazamento precisa ser comunicado. Sigilo também é atitude: não comentar dados de clientes, não mandar planilha por WhatsApp.'],
+ ex:'A "alergia a produto" é dado de saúde (sensível): só a atendente que faz o serviço deve ver.'});
+const CG_MIG=_card({t:'Atualização e manutenção do banco',p:[
+ 'O banco muda com o sistema: nova coluna, nova tabela, nova regra. Cada mudança vira um SCRIPT DE MIGRAÇÃO numerado (V1_criar_tabelas.sql, V2_email_cliente.sql) guardado no Git.',
+ 'Antes de atualizar a produção: BACKUP, teste num banco de homologação (cópia), avise e escolha um horário de pouco movimento (janela de manutenção).',
+ 'ALTER TABLE cliente ADD COLUMN email VARCHAR(100); Nova coluna obrigatória em tabela com dados precisa de DEFAULT (ou preencher antes de pôr NOT NULL).',
+ 'Atualizar dados em massa: UPDATE com WHERE, dentro de transação, conferindo antes com SELECT.',
+ 'Manutenção de rotina: VACUUM e ANALYZE (PostgreSQL) limpam espaço e atualizam estatísticas; atualizar a versão do SGBD corrige falhas de segurança.'],
+ ex:'V3_barbeiro_ativo.sql: ALTER TABLE barbeiro ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT TRUE; UPDATE barbeiro SET ativo = FALSE WHERE id = 3;'});
+const CG_BKP=_card({t:'Estratégias de backup e restauração',p:[
+ 'COMPLETO: copia tudo. INCREMENTAL: só o que mudou desde o último backup (qualquer um). DIFERENCIAL: o que mudou desde o último completo.',
+ 'LÓGICO: pg_dump gera os comandos SQL (ou um arquivo -Fc) de UM banco; volta com psql ou pg_restore. FÍSICO: pg_basebackup copia os arquivos do servidor inteiro.',
+ 'Agende: cron (Linux) ou Agendador de Tarefas (Windows). Regra 3-2-1: 3 cópias, 2 mídias, 1 fora do local.',
+ 'RPO: quanto dado posso perder (backup diário = até 1 dia). RTO: em quanto tempo preciso voltar a funcionar.',
+ 'Backup que nunca foi restaurado não é backup: teste a restauração num servidor separado e confira as contagens.'],
+ ex:'pg_dump -U postgres -Fc barbearia > barbearia_2026-11-23.dump  e depois  pg_restore -U postgres -d barbearia_teste barbearia_2026-11-23.dump'});
+
+Object.assign(Q,{
+ g_teste:[
+  {q:'O que é avaliar a persistência?',o:['Provar que o dado foi gravado, continua lá e volta certo','Ver se a tela é bonita','Contar as tabelas','Trocar a senha'],c:0,e:'Gravou, fechou, abriu, conferiu.'},
+  {q:'Num plano de teste, cada caso precisa ter...',o:['Entrada, resultado esperado e resultado obtido','Só o nome do testador','Só o print','A senha do banco'],c:0,e:'Esperado × obtido.'},
+  {q:'INSERT de serviço com preço -10. O resultado ESPERADO é...',o:['Erro: o CHECK (preco > 0) recusa','Gravar normalmente','Gravar como 10','Apagar o serviço'],c:0,e:'O banco deve recusar.'},
+  {q:'Agendamento com cliente_id 99 (não existe). Esperado:',o:['Erro de chave estrangeira','Criar o cliente 99 sozinho','Gravar sem cliente','Nada acontece'],c:0,e:'A FK protege.'},
+  {q:'Qual é o teste de persistência "de verdade"?',o:['Gravar, fechar o programa ou reiniciar o servidor, abrir de novo e consultar','Gravar e acreditar','Olhar a variável na memória','Imprimir a tela'],c:0,e:'A RAM apaga; o banco não.'},
+  {q:'O teste falhou. O que vai no relatório?',o:['O caso, o que deu errado, a correção e o novo teste','Nada, apaga o teste','Só "deu certo"','A senha'],c:0,e:'Relatório honesto ajuda a equipe.'}],
+ g_role:[
+  {q:'No PostgreSQL, usuários e grupos são...',o:['Roles','Tabelas','Schemas','Views'],c:0,e:'CREATE ROLE.'},
+  {q:'Qual comando dá ao caixa permissão de consultar e inserir agendamentos?',o:['GRANT SELECT, INSERT ON agendamento TO caixa;','REVOKE ALL ON agendamento TO caixa;','CREATE caixa ON agendamento;','ALTER caixa SELECT;'],c:0,e:'GRANT dá, REVOKE tira.'},
+  {q:'O que é o princípio do menor privilégio?',o:['Cada um recebe só a permissão que precisa','Todos são administradores','Ninguém tem senha','Só o estagiário acessa'],c:0,e:'Menos permissão, menos estrago.'},
+  {q:'O sistema da barbearia deve se conectar como postgres (superusuário)?',o:['Não: use um usuário com permissões mínimas','Sim, é mais fácil','Só nos finais de semana','Tanto faz'],c:0,e:'Se vazar, o estrago é total.'},
+  {q:'Para 5 atendentes com as mesmas permissões, o melhor é...',o:['Criar o papel atendimento, dar as permissões a ele e colocar as pessoas no grupo','Dar GRANT 5 vezes em cada tabela','Usar uma senha só para todas','Dar superusuário'],c:0,e:'Grupo facilita entrar e sair gente.'},
+  {q:'O contador só pode ver o faturamento. Melhor opção:',o:['GRANT SELECT só na view de faturamento','GRANT ALL no banco','Mandar a planilha por e-mail','Dar a senha do dono'],c:0,e:'View + permissão mínima.'}],
+ g_lgpd:[
+  {q:'Telefone e nome do cliente são, pela LGPD...',o:['Dados pessoais','Dados públicos sem regra','Dados sensíveis','Nada'],c:0,e:'Identificam a pessoa.'},
+  {q:'Qual destes é dado SENSÍVEL?',o:['Informação de saúde (alergia)','Nome do serviço','Preço do corte','Data do agendamento'],c:0,e:'Saúde, religião, biometria...'},
+  {q:'Minimização significa...',o:['Guardar só os dados necessários','Diminuir a fonte da tela','Apagar o banco','Usar letras minúsculas'],c:0,e:'Se não precisa, não coleta.'},
+  {q:'Num relatório para o marketing, o telefone deve aparecer...',o:['Mascarado (9****-1111) ou nem aparecer','Completo e em negrito','Com CPF junto','No grupo da família'],c:0,e:'Mascaramento.'},
+  {q:'O banco de TESTE deve ter...',o:['Dados falsos ou anonimizados','Cópia completa dos clientes reais','As senhas reais','Nada nunca'],c:0,e:'Teste não é lugar de dado real.'},
+  {q:'O cliente pediu para apagar os dados dele. Pela LGPD...',o:['Ele tem esse direito (com exceções legais, como nota fiscal)','Nunca pode','Só pagando','Só o Seu Jair decide'],c:0,e:'Direitos do titular.'}],
+ g_mig:[
+  {q:'O que é um script de migração?',o:['Um arquivo SQL numerado com uma mudança no banco, guardado no Git','Um vírus','Um backup','Um usuário'],c:0,e:'V1, V2, V3...'},
+  {q:'Antes de alterar o banco de produção, o primeiro passo é...',o:['Fazer backup e testar em homologação','Rodar direto e torcer','Apagar a tabela','Desligar o backup'],c:0,e:'Segurança primeiro.'},
+  {q:'Adicionar coluna obrigatória numa tabela que já tem dados exige...',o:['Um DEFAULT (ou preencher antes de pôr NOT NULL)','Apagar todos os dados','Criar outro banco','Nada'],c:0,e:'As linhas antigas precisam de valor.'},
+  {q:'Qual comando adiciona a coluna email em cliente?',o:['ALTER TABLE cliente ADD COLUMN email VARCHAR(100);','UPDATE cliente ADD email;','INSERT COLUMN email INTO cliente;','CREATE email ON cliente;'],c:0,e:'ALTER muda a estrutura.'},
+  {q:'Para que servem VACUUM e ANALYZE no PostgreSQL?',o:['Limpar espaço e atualizar estatísticas para consultas rápidas','Apagar clientes','Criar usuários','Fazer o MER'],c:0,e:'Manutenção de rotina.'},
+  {q:'Janela de manutenção é...',o:['Um horário de pouco movimento combinado para atualizar','Uma janela do Windows','Um tipo de índice','Um erro'],c:0,e:'Atrapalha menos o cliente.'}],
+ g_bkp:[
+  {q:'Backup DIFERENCIAL copia...',o:['O que mudou desde o último backup completo','Tudo sempre','O que mudou desde o último backup de qualquer tipo','Só as senhas'],c:0,e:'Incremental é desde o último qualquer.'},
+  {q:'pg_dump faz backup...',o:['Lógico, de um banco','Físico do servidor inteiro','Só das senhas','Do Windows'],c:0,e:'pg_basebackup é o físico.'},
+  {q:'Um arquivo .dump gerado com -Fc volta com...',o:['pg_restore','pg_dump','DROP','Excel'],c:0,e:'Formato custom volta com pg_restore.'},
+  {q:'RPO de 1 dia quer dizer...',o:['Posso perder no máximo 1 dia de dados','O sistema volta em 1 dia','O backup demora 1 dia','Faço backup 1 vez por ano'],c:0,e:'RTO é o tempo para voltar.'},
+  {q:'Regra 3-2-1:',o:['3 cópias, 2 mídias, 1 fora do local','3 senhas, 2 usuários, 1 banco','3 tabelas, 2 FKs, 1 PK','3 dias, 2 noites, 1 backup'],c:0,e:'Para sobreviver a qualquer desastre.'},
+  {q:'Como saber que o backup funciona?',o:['Restaurando num servidor de teste e conferindo os dados','Olhando o tamanho do arquivo','Confiando','Apagando o original'],c:0,e:'Backup não testado não é backup.'}]
+});
+
+MISSOES.lab_testes={regras:[['Banco','Barbearia com as restrições: telefone UNIQUE, preço CHECK > 0, nome NOT NULL e FKs.'],AVISO_ESC],
+ fim:'Plano de teste pronto! Siga para o Quartel dos Usuários.',
+ lista:[
+  {t:'Missão 1 • Resultado esperado',xp:25,txt:'Para cada caso de teste, qual é o resultado ESPERADO do banco?',
+   itens:[["INSERT cliente com telefone '99999-1111' (já existe)",['recusa por UNIQUE','grava','recusa por CHECK'],'recusa por UNIQUE'],['INSERT serviço com preço 0',['recusa por CHECK','grava','recusa por FK'],'recusa por CHECK'],['INSERT agendamento com cliente_id 99',['recusa por FK','grava','recusa por UNIQUE'],'recusa por FK'],['INSERT cliente sem nome',['recusa por NOT NULL','grava','recusa por CHECK'],'recusa por NOT NULL'],['INSERT cliente completo e válido',['grava','recusa por UNIQUE','recusa por FK'],'grava']],
+   e:'O banco bem planejado recusa o que quebra as regras.'},
+  {t:'SQL • Prova de persistência',xp:35,tipo:'sql',setup:MIN_SETUP,
+   txt:'Simule o teste: cadastre o cliente 9, Igor Lopes, telefone 91111-0000, nascido em 2002-08-15. Depois escreva um SELECT que mostre esse cliente pelo id (o banco confere).',
+   modelo:"INSERT INTO cliente (id, nome, telefone, nascimento)\nVALUES (...);\n\nSELECT * FROM cliente WHERE id = 9;",
+   testes:[{d:'o Igor Lopes está gravado com id 9 e telefone 91111-0000',sql:"SELECT 1 FROM cliente WHERE id=9 AND nome='Igor Lopes' AND telefone='91111-0000' AND nascimento='2002-08-15'",espera:1},{d:'os outros 8 clientes continuam lá',sql:'SELECT 1 FROM cliente WHERE id<9',espera:8}],
+   e:'No servidor de verdade, depois do INSERT você fecharia o programa, abriria de novo e rodaria o SELECT.'},
+  {t:'Escrita • Relatório do teste',xp:30,tipo:'texto',min:50,chaves:['esperado','obtido','unique','check','fk','estrangeira','not null','grav','persist','passou','falhou'],nchaves:3,
+   txt:'Escreva um pequeno relatório de teste: objetivo, 3 casos testados (com o esperado e o obtido), conclusão sobre a persistência e um próximo passo.',
+   e:'Objetivo → casos (esperado × obtido) → conclusão → próximos passos.'}]};
+MISSOES.permissoes={regras:[['Equipe','Seu Jair (dono), Maria e João (atendimento), Paula (contadora) e o sistema da barbearia.'],['Regra','Menor privilégio. O contador só vê faturamento. Ninguém usa o postgres no dia a dia.']],
+ fim:'Permissões no lugar! A Oficina da Atualização espera.',
+ lista:[
+  {t:'Missão 1 • Quem pode o quê',xp:25,txt:'Escolha o comando certo para cada caso.',
+   itens:[['Criar o grupo atendimento',['CREATE ROLE atendimento;','CREATE TABLE atendimento;','GRANT atendimento;'],'CREATE ROLE atendimento;'],['Atendimento consulta e insere agendamentos',['GRANT SELECT, INSERT ON agendamento TO atendimento;','GRANT ALL ON DATABASE barbearia TO atendimento;','REVOKE SELECT ON agendamento FROM atendimento;'],'GRANT SELECT, INSERT ON agendamento TO atendimento;'],['Colocar a Maria no grupo',['GRANT atendimento TO maria;','INSERT maria INTO atendimento;','ALTER maria atendimento;'],'GRANT atendimento TO maria;'],['Paula só vê o faturamento',['GRANT SELECT ON faturamento_barbeiro TO paula;','GRANT ALL ON cliente TO paula;','GRANT postgres TO paula;'],'GRANT SELECT ON faturamento_barbeiro TO paula;'],['João saiu da barbearia',['REVOKE atendimento FROM joao; (e desativar o login)','DROP DATABASE barbearia;','Deixar como está'],'REVOKE atendimento FROM joao; (e desativar o login)']],
+   e:'Grupo + GRANT mínimo + REVOKE quando a pessoa sai.'},
+  {t:'Missão 2 • Dados pessoais',xp:20,tipo:'chips',txt:'Quais dados da barbearia são DADOS PESSOAIS pela LGPD?',ops:['nome do cliente','telefone do cliente','data de nascimento','alergia a produto','preço do corte','nome do serviço'],certo:['nome do cliente','telefone do cliente','data de nascimento','alergia a produto'],
+   e:'Alergia é ainda mais: dado sensível (saúde).'}]};
+MISSOES.migracao={regras:[['Pedido','O Seu Jair quer mandar lembrete por e-mail e marcar o Rui Mendes como inativo (está de férias longas).'],['Banco','Os dados atuais NÃO podem ser perdidos.']],
+ fim:'Migração aplicada sem perder nada! Falta o Cofre Eterno.',
+ lista:[
+  {t:'SQL • V2: e-mail do cliente',xp:35,tipo:'sql',setup:MIN_SETUP,
+   txt:"Escreva a migração V2: adicione a coluna email (VARCHAR(100)) na tabela cliente e preencha o e-mail da Ana Souza (id 1) com 'ana@email.com'.",
+   modelo:"ALTER TABLE cliente ADD COLUMN ...;\nUPDATE cliente SET ... WHERE ...;",
+   testes:[{d:'a Ana (id 1) tem o e-mail ana@email.com',sql:"SELECT 1 FROM cliente WHERE id=1 AND email='ana@email.com'",espera:1},{d:'só a Ana recebeu e-mail (UPDATE com WHERE)',sql:'SELECT 1 FROM cliente WHERE email IS NOT NULL',espera:1},{d:'os 8 clientes continuam no banco',sql:'SELECT 1 FROM cliente',espera:8}],
+   e:'ALTER TABLE muda a estrutura sem apagar os dados; UPDATE com WHERE mexe só na Ana.'},
+  {t:'SQL • V3: barbeiro ativo',xp:40,tipo:'sql',setup:MIN_SETUP,
+   txt:'Escreva a migração V3: adicione em barbeiro a coluna ativo, BOOLEAN, NOT NULL, com DEFAULT TRUE. Depois marque o Rui Mendes (id 3) como inativo (FALSE).',
+   modelo:'ALTER TABLE barbeiro ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT ...;\nUPDATE barbeiro SET ... WHERE ...;',
+   testes:[{d:'Carlos e Jéssica continuam ativos',sql:'SELECT 1 FROM barbeiro WHERE ativo = 1 AND id IN (1,2)',espera:2},{d:'o Rui (id 3) está inativo',sql:'SELECT 1 FROM barbeiro WHERE id = 3 AND ativo = 0',espera:1},{d:'a coluna não aceita nulo',sql:'INSERT INTO barbeiro (id, nome, especialidade, ativo) VALUES (9, \'Teste\', \'x\', NULL)',espera:'erro'}],
+   e:'O DEFAULT TRUE preenche os barbeiros que já existiam; por isso o NOT NULL funciona.'}]};
+MISSOES.plano_backup={regras:[['Cenário','A barbearia funciona de segunda a sábado, das 8h às 20h. O Seu Jair aceita perder no máximo 1 dia de agendamentos e precisa voltar a funcionar em até 2 horas.'],AVISO_ESC],
+ fim:'Política de backup entregue. O Lich do Ransomware está chegando...',
+ lista:[
+  {t:'Missão 1 • Montando a rotina',xp:25,txt:'Escolha a melhor opção para cada item da política de backup.',
+   itens:[['Frequência',['diário, às 22h, depois do expediente','uma vez por mês','quando lembrar'],'diário, às 22h, depois do expediente'],['Ferramenta',['pg_dump -Fc barbearia','copiar a pasta do Windows com o banco ligado','print das tabelas'],'pg_dump -Fc barbearia'],['Onde guardar',['servidor + HD externo + nuvem (3-2-1)','só no próprio servidor','no pen drive do estagiário'],'servidor + HD externo + nuvem (3-2-1)'],['Agendamento',['cron ou Agendador de Tarefas','alarme do celular','não precisa'],'cron ou Agendador de Tarefas'],['Teste',['restaurar todo mês num banco de teste e conferir contagens','nunca','só depois do desastre'],'restaurar todo mês num banco de teste e conferir contagens'],['RPO e RTO do Seu Jair',['RPO 1 dia, RTO 2 horas','RPO 2 horas, RTO 1 dia','não existem'],'RPO 1 dia, RTO 2 horas']],
+   e:'Rotina automática, fora do local e testada.'},
+  {t:'Escrita • Política de backup',xp:35,tipo:'texto',min:60,chaves:['pg_dump','pg_restore','diario','3-2-1','nuvem','restaur','teste','rpo','rto','cron','agend','permiss','senha'],nchaves:4,
+   txt:'Escreva a política de backup e restauração da barbearia: o que é copiado, quando, com qual comando, onde fica cada cópia, como é testado e quem pode acessar os arquivos de backup.',
+   e:'Uma boa política cita pg_dump/pg_restore, frequência, 3-2-1, teste de restauração, RPO/RTO e quem acessa os arquivos.'}]};
+
+CHEFES.lich={nome:'Lich do Ransomware',cor:'#240046',olho:'#ff006e',selo:'lich',regras:[['Ataque','Segunda de manhã: os arquivos do servidor foram criptografados por um ransomware. A mensagem pede dinheiro para devolver.']],
+ fim:'O Lich foi destruído: backup externo, restauração testada, senhas trocadas e permissões revistas. Você concluiu a Sentinela dos Dados!',
+ etapas:[
+  {q:'Qual é a melhor saída?',o:['Isolar o servidor, restaurar o último backup externo limpo num servidor novo','Pagar o resgate','Desligar e esperar','Formatar e começar do zero sem backup'],c:0,e:'Pagar não garante nada.'},
+  {q:'O backup que ficava no próprio servidor também foi criptografado. Que regra teria evitado isso?',o:['3-2-1, com uma cópia fora do local e desconectada','Usar senha 123','Fazer backup mensal','Nenhuma'],c:0,e:'Uma cópia longe do ataque.'},
+  {tipo:'chips',q:'Depois de restaurar, o que fazer?',ops:['conferir contagens e consultas principais','trocar as senhas dos usuários do banco','revisar as permissões (menor privilégio)','atualizar o SGBD e o sistema operacional','avisar os clientes conforme a LGPD, se houve vazamento','dar superusuário a todos para agilizar'],certo:['conferir contagens e consultas principais','trocar as senhas dos usuários do banco','revisar as permissões (menor privilégio)','atualizar o SGBD e o sistema operacional','avisar os clientes conforme a LGPD, se houve vazamento'],e:'Restaurar, conferir, proteger e comunicar.'},
+  {q:'Golpe final: o último backup era de sábado 22h. O ataque foi na segunda 7h. O que se perdeu?',o:['Nada de agendamento: domingo a barbearia fecha (RPO cumprido)','Um mês','Tudo','Só as senhas'],c:0,e:'O RPO de 1 dia foi respeitado.'}]};
+
+const L_MIN={id:'minerador',antes:'dificil',nome:'Minerador',titulo:'As Minas do SELECT',aula:'Filtros, agregações, LEFT JOIN, subconsultas, views, índices e transações em SQL real',bioma:'mina',codigo:'SUBQUERY',
+ ind:'Ind. 3 e 5: desenvolver estruturas e avaliar a persistência com SQL',
+ fases:[
+ {nome:'Galeria dos Filtros',hist:[
+  _hist('Mineira-Chefe','#e09f3e','sql','Nas Minas, cada pergunta do Seu Jair é uma pepita escondida. O seu SQL roda num banco de verdade aqui no navegador.',"SELECT nome\nFROM cliente\nWHERE nome LIKE '%Souza';"),
+  _hist('Mineira-Chefe','#e09f3e','chave','Lembre: NULL não é zero nem vazio. Para achar, só com IS NULL.')],
+  lugares:{
+   veio:{x:70,y:60,nome:'Veio dos Operadores',ic:'caverna',tipo:'batalha',card:CM_OP,npc:'Mineira-Chefe',npcCor:'#e09f3e',fala:'O Toupeirão do = NULL cava no lugar errado. Mostre os filtros certos.',inimigo:['Toupeirão do = NULL','#7f5539','#ffd166'],qs:'n_op'},
+   minafiltros:{x:240,y:130,nome:'Mina dos Filtros',ic:'montanha',tipo:'missoes',miss:'mina_filtros',npc:'Mineira-Chefe',npcCor:'#e09f3e',fala:'Quatro pepitas: LIKE, IS NULL, BETWEEN e DISTINCT.'}},
+  pre:{veio:[],minafiltros:['veio']},edges:[['veio','minafiltros']],saida:'minafiltros'},
+ {nome:'Câmara das Funções',hist:[
+  _hist('Ferreiro das Contas','#9e2a2b','tabela','Aqui as linhas viram números: COUNT, SUM, AVG, MIN e MAX. E o CASE dá rótulo a cada valor.','SELECT b.nome, COUNT(*) AS total\nFROM agendamento a\nJOIN barbeiro b ON b.id = a.barbeiro_id\nGROUP BY b.nome\nHAVING COUNT(*) > 2;')],
+  lugares:{
+   forno:{x:60,y:120,nome:'Forno das Agregações',ic:'forja',tipo:'batalha',card:CM_AGG,npc:'Ferreiro das Contas',npcCor:'#9e2a2b',fala:'O Abaco Rachado esquece o GROUP BY. Mostre como resumir.',inimigo:['Ábaco Rachado','#bc6c25','#283618'],qs:'n_agg'},
+   minarel:{x:240,y:60,nome:'Mina dos Relatórios',ic:'mercado',tipo:'missoes',miss:'mina_relatorios',npc:'Seu Jair',npcCor:'#d62828',fala:'Preciso de relatórios para o fim do mês!'}},
+  pre:{forno:[],minarel:['forno']},edges:[['forno','minarel']],saida:'minarel'},
+ {nome:'Túneis dos JOINs',hist:[
+  _hist('Exploradora','#33415c','mapa','Nos túneis, o INNER JOIN só mostra quem tem par. O LEFT JOIN acende a lanterna para quem ficou sozinho.','SELECT c.nome\nFROM cliente c\nLEFT JOIN agendamento a ON a.cliente_id = c.id\nWHERE a.id IS NULL;'),
+  _hist('Exploradora','#33415c','livro','E quando uma resposta depende de outra, use um SELECT dentro do SELECT: a subconsulta.')],
+  lugares:{
+   encruzilhada:{x:70,y:60,nome:'Encruzilhada dos JOINs',ic:'ponte',tipo:'batalha',card:CM_JOIN,npc:'Exploradora',npcCor:'#33415c',fala:'A Aranha do INNER JOIN some com quem não tem par. Acenda a lanterna.',inimigo:['Aranha do INNER JOIN','#3c096c','#ff9100'],qs:'n_join'},
+   minaprof:{x:200,y:140,nome:'Mina Profunda',ic:'caverna',tipo:'missoes',miss:'mina_profunda',npc:'Exploradora',npcCor:'#33415c',fala:'Três pepitas raras: LEFT JOIN, subconsulta e soma por cliente.'}},
+  pre:{encruzilhada:[],minaprof:['encruzilhada']},edges:[['encruzilhada','minaprof']],saida:'minaprof'},
+ {nome:'Cofre das Transações',hist:[
+  _hist('Guardiã do Cofre','#14213d','cofre','No fundo da mina, aprende-se a proteger as operações: índice para buscar rápido, view para facilitar e transação para não deixar nada pela metade.','BEGIN;\nDELETE FROM agendamento_servico WHERE ...;\nINSERT INTO agendamento_servico VALUES (...);\nCOMMIT;')],
+  lugares:{
+   salaidx:{x:250,y:140,nome:'Salão dos Índices',ic:'biblioteca',tipo:'batalha',card:CM_IDX,npc:'Guardiã do Cofre',npcCor:'#14213d',fala:'A Lesma do Seq Scan lê a tabela inteira toda vez. Mostre o índice e a view.',inimigo:['Lesma do Seq Scan','#a7c957','#6a994e'],qs:'n_idx'},
+   camaratx:{x:170,y:60,nome:'Câmara da Transação',ic:'cofre',tipo:'missoes',miss:'mina_transacao',npc:'Guardiã do Cofre',npcCor:'#14213d',fala:'Transação, view e índice: tudo rodando de verdade.'},
+   basilisco:{x:50,y:120,nome:'Ninho do Basilisco',ic:'covil',tipo:'chefao',chefe:'basilisco',codigo:'COMMIT',npc:'Sentinela',npcCor:'#386641',fala:'O Basilisco do Relatório petrifica quem usa o JOIN errado. Enfrentem em equipe.'}},
+  pre:{salaidx:[],camaratx:['salaidx'],basilisco:['camaratx']},edges:[['salaidx','camaratx'],['camaratx','basilisco']]}]};
+
+const L_GUA={id:'guardiao',antes:'expert',nome:'Guardião',titulo:'A Sentinela dos Dados',aula:'Testes de persistência, usuários e LGPD, atualização e backup',bioma:'aurora',codigo:'GUARDIAO',
+ ind:'Ind. 5 e 6: avaliar a persistência e operar atualização, permissões e backup',
+ fases:[
+ {nome:'Campo de Provas',hist:[
+  _hist('Inspetora','#0077b6','lab','Um sistema só é confiável depois de testado. No Campo de Provas, você prova que o banco grava, guarda e recusa o que está errado.','Caso | Entrada | Esperado | Obtido\n  1  | cliente válido | grava | grava ✔\n  2  | telefone repetido | erro UNIQUE | ...')],
+  lugares:{
+   arena:{x:70,y:60,nome:'Arena da Integridade',ic:'muralha',tipo:'batalha',card:CG_TESTE,npc:'Inspetora',npcCor:'#0077b6',fala:'O Bug Invisível só aparece para quem não testa. Mostre o plano de teste.',inimigo:['Bug Invisível','#caf0f8','#03045e'],qs:'g_teste'},
+   labtestes:{x:240,y:130,nome:'Laboratório dos Testes',ic:'lab',tipo:'missoes',miss:'lab_testes',npc:'Inspetora',npcCor:'#0077b6',fala:'Planeje, rode e relate.'}},
+  pre:{arena:[],labtestes:['arena']},edges:[['arena','labtestes']],saida:'labtestes'},
+ {nome:'Quartel dos Usuários',hist:[
+  _hist('Capitã da Guarda','#6a040f','cadeado','No Quartel, ninguém entra sem crachá e cada um só abre as portas de que precisa.',"CREATE ROLE atendimento;\nGRANT SELECT, INSERT ON agendamento TO atendimento;\nCREATE ROLE maria LOGIN PASSWORD '****';\nGRANT atendimento TO maria;"),
+  _hist('Capitã da Guarda','#6a040f','portao','Na Torre da LGPD, você aprende a proteger os dados das pessoas, não só as tabelas.')],
+  lugares:{
+   salaroles:{x:60,y:120,nome:'Salão dos Papéis',ic:'castelo',tipo:'batalha',card:CG_ROLE,npc:'Capitã da Guarda',npcCor:'#6a040f',fala:'O Intruso Superusuário entrou com a senha do postgres. Distribua as permissões certas.',inimigo:['Intruso Superusuário','#212529','#e5383b'],qs:'g_role'},
+   torrelgpd:{x:170,y:50,nome:'Torre da LGPD',ic:'torre',tipo:'batalha',card:CG_LGPD,npc:'Encarregada de Dados',npcCor:'#7209b7',fala:'O Vazador Fofoqueiro manda planilha de clientes no grupo. Detenha ele.',inimigo:['Vazador Fofoqueiro','#f72585','#4cc9f0'],qs:'g_lgpd'},
+   quartelchaves:{x:270,y:130,nome:'Quartel das Chaves',ic:'muralha',tipo:'missoes',miss:'permissoes',npc:'Capitã da Guarda',npcCor:'#6a040f',fala:'Monte as permissões da equipe do Seu Jair.'}},
+  pre:{salaroles:[],torrelgpd:['salaroles'],quartelchaves:['torrelgpd']},edges:[['salaroles','torrelgpd'],['torrelgpd','quartelchaves']],saida:'quartelchaves'},
+ {nome:'Oficina da Atualização',hist:[
+  _hist('Mecânico do Banco','#ee9b00','forja','O banco nunca fica pronto para sempre. Ele é atualizado com scripts de migração, sempre com backup antes e teste em homologação.','-- V2_email_cliente.sql\nALTER TABLE cliente ADD COLUMN email VARCHAR(100);')],
+  lugares:{
+   engrenagem:{x:70,y:60,nome:'Engrenagem da Migração',ic:'moinho',tipo:'batalha',card:CG_MIG,npc:'Mecânico do Banco',npcCor:'#ee9b00',fala:'O Gremlin da Produção altera o banco no meio do expediente, sem backup. Pare ele.',inimigo:['Gremlin da Produção','#55a630','#ff0054'],qs:'g_mig'},
+   bancada:{x:200,y:140,nome:'Bancada da Migração',ic:'forja',tipo:'missoes',miss:'migracao',npc:'Mecânico do Banco',npcCor:'#ee9b00',fala:'Duas migrações, sem perder um dado.'}},
+  pre:{engrenagem:[],bancada:['engrenagem']},edges:[['engrenagem','bancada']],saida:'bancada'},
+ {nome:'Cofre Eterno',hist:[
+  _hist('Guardião Ancião','#005f73','cofre','No Cofre Eterno, os dados sobrevivem a qualquer desastre: completo, incremental, diferencial, 3-2-1, RPO e RTO.','pg_dump -U postgres -Fc barbearia > barbearia.dump\npg_restore -U postgres -d barbearia_teste barbearia.dump'),
+  _hist('Guardião Ancião','#005f73','dragao','Escreva a política de backup. O Lich do Ransomware está a caminho.')],
+  lugares:{
+   estrategias:{x:250,y:140,nome:'Sala das Estratégias',ic:'cofre',tipo:'batalha',card:CG_BKP,npc:'Guardião Ancião',npcCor:'#005f73',fala:'A Sombra do Backup Nunca Testado acha que o arquivo basta. Mostre a estratégia.',inimigo:['Sombra do Nunca Testado','#495057','#adb5bd'],qs:'g_bkp'},
+   mesaplano:{x:170,y:60,nome:'Mesa do Plano',ic:'cartorio',tipo:'missoes',miss:'plano_backup',npc:'Guardião Ancião',npcCor:'#005f73',fala:'Monte a rotina e escreva a política.'},
+   lich:{x:50,y:120,nome:'Cripta do Lich',ic:'covil',tipo:'chefao',chefe:'lich',codigo:'RESTORE',npc:'Sentinela',npcCor:'#240046',fala:'O Lich do Ransomware criptografou o servidor. Enfrentem em equipe.'}},
+  pre:{estrategias:[],mesaplano:['estrategias'],lich:['mesaplano']},edges:[['estrategias','mesaplano'],['mesaplano','lich']]}]};
+
+// ---------------------------------------------------------------- registro: ordem pedagógica e pré-requisitos
+L_MEDIO.antes=L_MEDIO.antes||'facil';L_DIFICIL.antes=L_DIFICIL.antes||'medio';L_EXPERT.antes=L_EXPERT.antes||'dificil';
+LEVELS.length=0;LEVELS.push(L_FACIL,L_ARQ,L_MEDIO,L_CART,L_DIFICIL,L_MIN,L_EXPERT,L_GUA,L_OFICINA);
+Object.assign(SELOS,{
+ arquiteto:['Arquiteto concluído','Terminou a Torre do Servidor'],cartografo:['Cartógrafo concluído','Terminou o Labirinto do MER'],minerador:['Minerador concluído','Terminou as Minas do SELECT'],guardiao:['Guardião concluído','Terminou a Sentinela dos Dados'],oficina:['Mestre concluído','Terminou a Oficina do Construtor'],
+ tita:['Derruba-Titã','Derrotou o Chefão do Arquiteto'],quimera:['Domador(a) da Quimera','Derrotou o Chefão do Cartógrafo'],basilisco:['Olhar de Pedra','Derrotou o Chefão do Minerador'],lich:['Caça-Lich','Derrotou o Chefão do Guardião']});
+NIVEIS_XP.push([1600,'Especialista em Dados'],[2300,'Guardião(ã) dos Dados'],[3200,'Lenda do Reino']);
 // ===================== SOM (8 bits, gerado no navegador) =====================
 const SOM={gesto:false,querida:'mapa',ctx:null,master:null,musG:null,fx:true,mus:true,faixa:null,passo:0,prox:0,timer:null};
 try{const p=JSON.parse(localStorage.getItem('reinoDosDados_som')||'{}');if(p.fx===false)SOM.fx=false;if(p.mus===false)SOM.mus=false}catch(e){}
@@ -1351,7 +1967,7 @@ function codigo(id,ok){const n=NOD[id];liberarCodigo(n.codigo,LV.nome+' • '+n.
 // conclusão de lugar / região / nível
 function concluiu(id){const k=NOD[id].fase;
  if(faseCompleta(k)&&!PR().abertos['@fase'+k]){PR().abertos['@fase'+k]=true;salvar();setTimeout(()=>sfx('fanfarra'),350);
-  if(nivelCompleto(LV)){darSelo(LV.id);const i=LEVELS.indexOf(LV);const prox=LEVELS[i+1];if(prox)S.lib[prox.id]=true;salvar();
+  if(nivelCompleto(LV)){darSelo(LV.id);LEVELS.forEach((x,j)=>{const a=x.antes||(LEVELS[j-1]||{}).id;if(a===LV.id)S.lib[x.id]=true});salvar();
    return cena(el('h2',{},`Nível ${LV.nome} concluído!`),el('div',{class:'fala'},`Você completou "${LV.titulo}". `+(prox?`O nível ${prox.nome} ("${prox.titulo}") foi liberado.`:'Você é uma lenda do Reino dos Dados!')),
     el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:fechar}},'Ver o mapa'),el('button',{type:'button',on:{click:telaNiveis}},'Escolher nível')))}
   const prox=LV.fases[k+1];
@@ -1415,7 +2031,7 @@ function ficha(){if(!S)return;const n=nivel(S.xp);
   NUVEM_URL?el('div',{class:'dica',id:'envStatus'},nuvemStatusTxt()||'O progresso vai sozinho para o professor.'):el('div',{class:'dica'},'Mostre esta ficha ao Mestre no fim da aula para registrar o seu XP.'),NUVEM_URL?el('div',{class:'acoes',style:'justify-content:flex-start'},el('button',{class:'sec',type:'button',on:{click:ev=>{const b=ev.currentTarget;b.disabled=true;$('envStatus').textContent='Enviando…';nuvemEnviar(JSON.parse(JSON.stringify(S))).then(ok=>{b.disabled=false;$('envStatus').textContent=ok?nuvemStatusTxt():'Sem internet agora: tento de novo sozinho.'})}}},'Enviar agora ao professor')):null,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>meusCodigos(ficha)}},'🔑 Meus códigos'),el('button',{class:'sec',type:'button',on:{click:()=>conf.hidden=false}},'Recomeçar jogo'),el('button',{type:'button',on:{click:fechar}},'Fechar')),conf)}
 function entrarNivel(lv){montarNivel(lv);S.lv=lv.id;const p=PR();const pos=p.pos&&NOD[p.pos]?p.pos:primeiro(0);p.pos=pos;heroi={x:NOD[pos].x,y:NOD[pos].y};cam={x:Math.max(0,Math.min(W-VW,heroi.x-VW/2)),y:Math.max(0,Math.min(H-VH,heroi.y-VH/2))};visao=false;salvar();hud();
  if(!p.hist[0])historia(0,fechar);else fechar()}
-function telaNiveis(){const cards=LEVELS.map((lv,i)=>{const lib=S.lib[lv.id];const p=S.P[lv.id];const tot=lv.fases.reduce((a,f)=>a+Object.values(f.lugares).filter(l=>!l.extra).length,0);const fe=p?lv.fases.reduce((a,f)=>a+Object.entries(f.lugares).filter(([id,l])=>!l.extra&&p.feito[id]).length,0):0;
+function telaNiveis(){if(typeof sincCodigos==='function')sincCodigos();const cards=LEVELS.map((lv,i)=>{const lib=S.lib[lv.id];const p=S.P[lv.id];const tot=lv.fases.reduce((a,f)=>a+Object.values(f.lugares).filter(l=>!l.extra).length,0);const fe=p?lv.fases.reduce((a,f)=>a+Object.entries(f.lugares).filter(([id,l])=>!l.extra&&p.feito[id]).length,0):0;
   const inp=el('input',{id:'lib-'+lv.id,placeholder:'CÓDIGO','aria-label':'Código do Mestre para '+lv.nome,autocomplete:'off',style:'width:9em'});const fb=el('span',{class:'dica'});if(!lib&&i>0&&nivelCompleto(lv.antes?LEVELS.find(x=>x.id===lv.antes):LEVELS[i-1])){liberarCodigo(lv.codigo,'Tela Níveis • libera o nível '+lv.nome);inp.value=lv.codigo;fb.textContent='🔑 Código liberado: '+lv.codigo}
   const lib2=()=>{if(inp.value.trim().toUpperCase()===lv.codigo){sfx('porta');S.lib[lv.id]=true;salvar();telaNiveis()}else{sfx('erro');fb.textContent='Código errado.';inp.classList.add('tremer');setTimeout(()=>inp.classList.remove('tremer'),400)}};
   inp.addEventListener('keydown',e=>{if(e.key==='Enter')lib2()});
@@ -1447,6 +2063,10 @@ requestAnimationFrame(desenha);inicio();
 // ===================== ESPAÇOS DE ESCRITA, PESQUISA E SQL =====================
 // texto: resposta escrita (mínimo de palavras); pesquisa: resposta + fonte; sql: o código RODA num banco
 // de treino (SQLite no navegador, compatível com o básico do PostgreSQL) e passa por testes.
+BIOMAS.nuvem={g:['#a9c6de','#bcd4e6','#93b4cf'],fl:['#ffffff','#ffd166','#e0fbfc'],agua:'#3d5a80',brilho:'#98c1d9',marg:'#e0e1dd',cam:'#f1faee',camB:'#778da9',arv:['#577590','#7aa0c4','#43607a'],tronco:'#3d405b'};
+BIOMAS.outono={g:['#a5732f','#b8853a','#8f6327'],fl:['#d62828','#f77f00','#fcbf49'],agua:'#2a6f97',brilho:'#61a5c2',marg:'#ddb892',cam:'#e6ccb2',camB:'#7f5539',arv:['#bc4749','#e76f51','#9c2c2c'],tronco:'#432818'};
+BIOMAS.mina={g:['#4a3f35','#57493d','#3d342b'],fl:['#ffd166','#06d6a0','#ef476f'],agua:'#1b3a4b',brilho:'#4ea8de',marg:'#6c584c',cam:'#a98467',camB:'#5e503f',arv:['#6b705c','#a5a58d','#3f4238'],tronco:'#2b2118'};
+BIOMAS.aurora={g:['#1b4332','#225740','#163a2b'],fl:['#80ffdb','#c77dff','#ffffff'],agua:'#0b3954',brilho:'#48cae4',marg:'#2d6a4f',cam:'#74c69d',camB:'#1b4332',arv:['#52b788','#95d5b2','#2d6a4f'],tronco:'#081c15'};
 BIOMAS.forja={...BIOMAS.savana,g:['#6b4f3a','#7a5a42','#5a4030'],fl:['#ff7b00','#ffd166','#e63946'],agua:'#9d0208',brilho:'#f48c06',marg:'#3d2b1f'};
 const RASC_KEY='reinoDosDados_rascunho';
 function rascLer(k){try{return(JSON.parse(localStorage.getItem(RASC_KEY)||'{}'))[k]||''}catch(e){return''}}
@@ -1531,7 +2151,7 @@ function caixaCodigo(cod){return el('div',{class:'fb ok codlib'},'🔑 Código l
 // libera (sem alarde) todos os códigos cujo caminho já foi cumprido, inclusive de progresso antigo
 function sincCodigos(){if(!S)return;S.codigos=S.codigos||{};let novo=false;const add=(c,o)=>{if(c&&!S.codigos[c]){S.codigos[c]={onde:o,ts:Date.now()};novo=true}};
  try{if(LV)for(const[id,n]of Object.entries(NOD))if(n.codigo&&estado(id)!=='trava')add(n.codigo,LV.nome+' • '+n.nome);
-  LEVELS.forEach((lv,i)=>{if(i>0&&lv.codigo&&nivelCompleto(lv.antes?LEVELS.find(x=>x.id===lv.antes):LEVELS[i-1]))add(lv.codigo,'Tela Níveis • libera o nível '+lv.nome)});
+  LEVELS.forEach((lv,i)=>{if(i>0&&lv.codigo&&nivelCompleto(lv.antes?LEVELS.find(x=>x.id===lv.antes):LEVELS[i-1])){add(lv.codigo,'Tela Níveis • libera o nível '+lv.nome);if(!S.lib[lv.id]){S.lib[lv.id]=true;novo=true}}});
   LEVELS.forEach(lv=>{const p=S.P[lv.id];if(!p)return;lv.fases.forEach(f=>Object.entries(f.lugares).forEach(([id,n])=>{if(n.codigo&&p.feito[id])add(n.codigo,lv.nome+' • '+n.nome)}))})}catch(e){}
  if(novo)salvar()}
 function meusCodigos(volta){sincCodigos();const c=Object.entries((S&&S.codigos)||{}).sort((a,b)=>a[1].ts-b[1].ts);
@@ -1542,7 +2162,7 @@ function meusCodigos(volta){sincCodigos();const c=Object.entries((S&&S.codigos)|
 // Busca na planilha o progresso de todos os alunos. Proteção simples: o arquivo guarda só um "resumo" da senha.
 const SENHA_H=3751928130;
 function senhaOk(t){let h=2166136261>>>0;const s='rd|'+normNome(t);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h===SENHA_H}
-const IND_NIVEL={facil:[1,2],medio:[2,4],dificil:[3,4],expert:[5,6],oficina:[2,3,4,5]};
+const IND_NIVEL={facil:[1,2],medio:[2,4],dificil:[3,4],expert:[5,6],oficina:[2,3,4,5],arquiteto:[1],cartografo:[2,4],minerador:[3,5],guardiao:[5,6]};
 const IND_TXT={1:'Define a arquitetura do BD',2:'Planeja o BD (regras de negócio)',3:'Desenvolve as estruturas',4:'Modela o BD',5:'Avalia a persistência',6:'Atualização, permissões e backup'};
 const BAT=LEVELS.flatMap(lv=>lv.fases.flatMap(f=>Object.entries(f.lugares).filter(([id,l])=>l.tipo==='batalha').map(([id,l])=>({lv:lv.id,lvn:lv.nome,id,nome:l.nome}))));
 const PROF_KEY='reinoDosDados_prof';
@@ -1593,7 +2213,7 @@ function painelProf(buscar){const AL=alunosProf();const saida=el('div',{});
  cena(el('h2',{},'Área do Professor • progresso da turma'),
   el('h3',{class:'ph'},'CÓDIGOS DO MESTRE (não mostrar aos alunos)'),
   el('div',{class:'tbw'},el('table',{class:'tb'},el('tr',{},el('th',{},'Código'),el('th',{},'Onde')),
-   ...[['NAVALHA','Fácil • Portão do Mestre (Região 3)'],['DRAGAO','Fácil • Castelo do Dragão N:N (chefão)'],['MODELO','Tela Níveis • libera o Médio'],['HIDRA','Médio • Lago da Hidra (chefão)'],['CREATE','Tela Níveis • libera o Difícil'],['WHERE','Difícil • Covil do Golem (chefão)'],['PYTHON','Tela Níveis • libera o Expert'],['APAGAO','Expert • Covil do Dragão do Apagão (chefão)'],['OFICINA','Tela Níveis • libera o Mestre (escrita, pesquisa e SQL)']].map(([c,o])=>el('tr',{},el('td',{},el('b',{},c)),el('td',{},o))))),
+   ...[['NAVALHA','Fácil • Portão do Mestre (Região 3)'],['DRAGAO','Fácil • Castelo do Dragão N:N (chefão)'],['MODELO','Tela Níveis • libera o Médio'],['HIDRA','Médio • Lago da Hidra (chefão)'],['CREATE','Tela Níveis • libera o Difícil'],['WHERE','Difícil • Covil do Golem (chefão)'],['PYTHON','Tela Níveis • libera o Expert'],['APAGAO','Expert • Covil do Dragão do Apagão (chefão)'],['OFICINA','Tela Níveis • libera o Mestre (escrita, pesquisa e SQL)'],['SERVIDOR','Tela Níveis • libera o Arquiteto'],['ACID','Arquiteto • Fortaleza do Titã (chefão)'],['CARDINAL','Tela Níveis • libera o Cartógrafo'],['QUIMERA','Cartógrafo • Covil da Quimera (chefão)'],['SUBQUERY','Tela Níveis • libera o Minerador'],['COMMIT','Minerador • Ninho do Basilisco (chefão)'],['GUARDIAO','Tela Níveis • libera o Guardião'],['RESTORE','Guardião • Cripta do Lich (chefão)']].map(([c,o])=>el('tr',{},el('td',{},el('b',{},c)),el('td',{},o))))),
   nst,barra,saida,el('div',{class:'acoes'},el('button',{class:'sec',type:'button',on:{click:()=>{profAberto=false;fechar();inicio()}}},'Sair da área (trancar)')));
  $('cena').classList.add('largo')}
 
@@ -1601,6 +2221,6 @@ function painelProf(buscar){const AL=alunosProf();const saida=el('div',{});
 const ESC=LEVELS.flatMap(lv=>lv.fases.flatMap(f=>Object.entries(f.lugares).filter(([id,l])=>l.tipo==='missoes'&&MISSOES[l.miss].lista.some(m=>['texto','pesquisa','sql'].includes(m.tipo))).map(([id,l])=>({lv:lv.id,id,nome:l.nome,M:MISSOES[l.miss]}))));
 function respostasHTML(AL){const blocos=AL.map(x=>{const itens=ESC.flatMap(z=>{const r=((((x.P||{})[z.lv]||{}).resp||{})[z.id])||{};return z.M.lista.map((m,i)=>[m,r[i]]).filter(([m,v])=>v).map(([m,v])=>`<div class="regras"><b>${escH(m.t)}</b><pre class="resp">${escH(v.t)}</pre>${v.f?`<span class="dica">Fonte: ${escH(v.f)}</span>`:''}</div>`)});
   return itens.length?`<details><summary>${escH(x.nome)} • ${itens.length} resposta(s)</summary>${itens.join('')}</details>`:''}).filter(Boolean);
- return `<h3 class="ph">RESPOSTAS ESCRITAS, PESQUISAS E SQL (nível Mestre)</h3>${blocos.length?blocos.join(''):'<p class="dica">Ninguém enviou respostas escritas ainda.</p>'}`}
+ return `<h3 class="ph">RESPOSTAS ESCRITAS, PESQUISAS E SQL</h3>${blocos.length?blocos.join(''):'<p class="dica">Ninguém enviou respostas escritas ainda.</p>'}`}
 </script>
 </body></html>
